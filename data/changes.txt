@@ -84,3 +84,4 @@ Updated on: 2026-04-04
 - Moved the `Time range` explanation to the top of the Ripple Story interpretation panel, replaced the static `Coverage` card with a dynamic `Policy move` summary, and added a `Selected lens` card so the panel better reflects the active filters and time window.
 - Expanded the quick timeline checkpoints so Ripple Story now includes `2y` and `3y` after `18m`, and Charts And Comparison now includes an explicit `18m` step between `1y` and `2y`.
 - Relabeled the shared `18m` quick-select checkpoint to `1.5y` so the longer-range timeline chips read more consistently.
+- Rewrote the top README run section to show the exact PowerShell commands for setting the FRED key, starting the dashboard, and building production output.

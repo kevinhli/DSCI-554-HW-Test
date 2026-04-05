@@ -2,14 +2,23 @@
 
 ## How To Run On Your Computer (If Needed)
 
-1. Install Python and Node.js on your computer if they are not already installed.
-2. Open PowerShell in the root of this repository.
-3. Set your FRED API key:
-   `$env:FRED_API_KEY="your_fred_api_key_here"`
-4. Run the dashboard launcher:
-   `.\run_dashboard.ps1`
-5. Wait for the script to refresh the data, install any missing dependencies, and start the local Vite server.
-6. Open the local URL shown in the terminal, usually `http://localhost:5173`.
+1. Open PowerShell in the root of this repository.
+2. Set your FRED API key:
+   ```powershell
+   $env:FRED_API_KEY="your_fred_api_key_here"
+   ```
+3. Start the dashboard:
+   ```powershell
+   powershell -ExecutionPolicy Bypass -File .\run_dashboard.ps1
+   ```
+4. Open the local URL shown in the terminal, usually:
+   ```text
+   http://localhost:5173
+   ```
+5. If you want a production build instead of the local dev server, run:
+   ```powershell
+   powershell -ExecutionPolicy Bypass -File .\run_dashboard.ps1 -Production
+   ```
 
 ## Monetary Policy Dashboard
 
