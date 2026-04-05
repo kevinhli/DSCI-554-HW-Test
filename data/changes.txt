@@ -41,6 +41,22 @@ Updated on: 2026-04-04
 - Moved the Full-History Indicator Trace and Matched Event Scorecard onto the second view so the hero ripple page stays more focused.
 - Moved the story/evidence workspace switcher above Linked Controls so users choose a dashboard view before adjusting filters.
 - Reworded the workspace and control labels in plainer language, and added short helper text under each toolbar field to explain what it affects.
+- Hid the Ripple Lens control on the Evidence view so the toolbar only shows controls that affect the chart and scorecard on that page.
+- Hid the Compare With control on the Ripple Story view and removed the comparison-event note from the story-side reading panel, since comparison is now treated as an Evidence-only task.
+- Reordered the linked controls so the Story view pairs Main Event with Ripple Lens on the first row, making the toolbar feel more balanced and easier to scan.
+- Adjusted the Ripple Story control widths so Indicator Focus and Value Style now form a second clean two-column row under Main Event and Ripple Lens.
+- Matched the Evidence view to the same two-row structure: Main Event and Compare With on the first row, then Indicator Focus and Value Style on the second.
+- Corrected the Evidence view control order so Compare With now appears beside Main Event, with Indicator Focus and Value Style together on the second row.
+- Replaced the low-value hero `Deployment Fit` stat with a subject-relevant `Ripple Layers` stat and added a small U.S. flag accent between the intro block and the top-level dashboard statistics.
+- Refined the hero layout so the U.S. flag sits larger and more centrally between the intro and the stats, and simplified the stat area to three cards with Coverage centered beneath Economic Series and FOMC Events.
+- Replaced the earlier CSS-built flag accent with a cleaner inline SVG flag so the hero header reads more polished and less like a rounded sticker.
+- Shifted the hero flag left so it sits closer to the title block instead of visually crowding the stat cards.
+- Pushed the hero flag substantially farther left on desktop so it occupies the intended gap between the title block and the stats, while keeping mobile layouts centered.
+- Swapped the hero layout so the statistics now sit in the middle column and the U.S. flag moves to the far right, using grid areas instead of a manual desktop offset.
+- Shifted the three hero stat cards farther left on desktop so they sit closer to the title block and read as part of the same header cluster.
+- Split the timeline controls by view: Ripple Story keeps `Play ripple` and shorter month checkpoints, while Charts And Comparison now uses `Play timeline` plus 0m, 3m, 6m, 1y, 2y, and 3y checkpoints.
+- Expanded the generated dashboard timeline range from 18 months to 36 months so the Evidence view can scrub out to 3 years after the selected event.
+- Disabled browser caching for `dashboard-data.json` in the app loader so newly generated timeline ranges and refreshed API data show up immediately after a reload.
 
 3. API integration model
 - The dashboard is not making live browser calls to FRED or Yahoo.

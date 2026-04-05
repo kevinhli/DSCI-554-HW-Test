@@ -23,6 +23,17 @@ const VIEW_OPTIONS = [
   },
 ];
 
+const FLAG_STRIPES = Array.from({ length: 13 }, (_, index) => index);
+const FLAG_STARS = Array.from({ length: 9 }, (_, rowIndex) => {
+  const starCount = rowIndex % 2 === 0 ? 6 : 5;
+
+  return Array.from({ length: starCount }, (_, columnIndex) => ({
+    key: `${rowIndex}-${columnIndex}`,
+    cx: rowIndex % 2 === 0 ? 11 + columnIndex * 11 : 16.5 + columnIndex * 11,
+    cy: 8 + rowIndex * 5.1,
+  }));
+}).flat();
+
 function DashboardContent() {
   const { status, error, data } = useDashboardStore();
   const [activeView, setActiveView] = useState(VIEW_OPTIONS[0].id);
@@ -61,7 +72,7 @@ function DashboardContent() {
     <main className="app-container py-4 py-lg-5">
       <header className="page-hero">
         <div className="hero-grid">
-          <div>
+          <div className="hero-copy-block">
             <p className="eyebrow">DSCI 554 Demo</p>
             <h1>Policy Ripple Dashboard</h1>
             <p className="hero-copy">
@@ -69,6 +80,56 @@ function DashboardContent() {
               decisions propagate across markets, credit transmission channels,
               and slower macro outcomes.
             </p>
+          </div>
+
+          <div className="hero-flag-wrap" aria-label="United States monetary policy focus">
+            <svg
+              className="hero-flag-svg"
+              viewBox="0 0 190 100"
+              aria-hidden="true"
+            >
+              <defs>
+                <clipPath id="heroFlagClip">
+                  <rect x="1" y="1" width="188" height="98" rx="10" ry="10" />
+                </clipPath>
+              </defs>
+
+              <g clipPath="url(#heroFlagClip)">
+                <rect width="190" height="100" fill="#ffffff" />
+                {FLAG_STRIPES.map((stripeIndex) => (
+                  <rect
+                    key={stripeIndex}
+                    x="0"
+                    y={stripeIndex * (100 / 13)}
+                    width="190"
+                    height={100 / 13}
+                    fill={stripeIndex % 2 === 0 ? '#c73f55' : '#ffffff'}
+                  />
+                ))}
+                <rect x="0" y="0" width="76" height="54" fill="#21497b" />
+                {FLAG_STARS.map((star) => (
+                  <circle
+                    key={star.key}
+                    cx={star.cx}
+                    cy={star.cy}
+                    r="1.35"
+                    fill="#ffffff"
+                  />
+                ))}
+              </g>
+
+              <rect
+                x="1"
+                y="1"
+                width="188"
+                height="98"
+                rx="10"
+                ry="10"
+                fill="none"
+                stroke="rgba(138, 178, 228, 0.5)"
+                strokeWidth="2"
+              />
+            </svg>
           </div>
 
           <div className="hero-stats">
@@ -86,10 +147,6 @@ function DashboardContent() {
                 {new Date(data.meta.date_start).getFullYear()}-
                 {new Date(data.meta.date_end).getFullYear()}
               </strong>
-            </article>
-            <article className="hero-stat-card">
-              <span>Deployment fit</span>
-              <strong>Static GitHub Pages</strong>
             </article>
           </div>
         </div>
@@ -125,7 +182,7 @@ function DashboardContent() {
         </div>
       </section>
 
-      <DashboardToolbar />
+      <DashboardToolbar activeView={activeView} />
 
       {activeView === 'ripple-explorer' ? (
         <div className="row g-4 mt-1">

@@ -1,6 +1,7 @@
 import { useDashboardStore } from '../store/DashboardStore';
 
-const QUICK_OFFSETS = [0, 3, 6, 12, 18];
+const STORY_QUICK_OFFSETS = [0, 3, 6, 12, 18];
+const EVIDENCE_QUICK_OFFSETS = [0, 3, 6, 12, 24, 36];
 
 function getOffsetLabel(offset) {
   if (offset === 0) {
@@ -11,10 +12,30 @@ function getOffsetLabel(offset) {
     return '1 month after';
   }
 
+   if (offset === 12) {
+    return '1 year after';
+  }
+
+  if (offset > 12 && offset % 12 === 0) {
+    return `${offset / 12} years after`;
+  }
+
   return `${offset} months after`;
 }
 
-export default function DashboardToolbar() {
+function getChipLabel(offset) {
+  if (offset === 0) {
+    return '0m';
+  }
+
+  if (offset >= 12 && offset % 12 === 0) {
+    return `${offset / 12}y`;
+  }
+
+  return `${offset}m`;
+}
+
+export default function DashboardToolbar({ activeView }) {
   const {
     data,
     selectedEvent,
@@ -36,6 +57,25 @@ export default function DashboardToolbar() {
     stopPlay,
     formatters,
   } = useDashboardStore();
+  const showRippleLens = activeView !== 'evidence-lab';
+  const showComparisonEvent = activeView === 'evidence-lab';
+  const isEvidenceView = activeView === 'evidence-lab';
+  const storyControlColClass = 'col-12 col-md-6 col-xl-6';
+  const evidenceControlColClass = 'col-12 col-md-6 col-xl-6';
+  const indicatorColClass = showRippleLens
+    ? storyControlColClass
+    : evidenceControlColClass;
+  const valueStyleColClass = showRippleLens
+    ? storyControlColClass
+    : evidenceControlColClass;
+  const quickOffsets = isEvidenceView
+    ? EVIDENCE_QUICK_OFFSETS
+    : STORY_QUICK_OFFSETS;
+  const timelineEyebrow = isEvidenceView
+    ? 'Comparison Timeline'
+    : 'Propagation Timeline';
+  const playLabel = isEvidenceView ? 'Play timeline' : 'Play ripple';
+  const pauseLabel = isEvidenceView ? 'Pause timeline' : 'Pause ripple';
 
   return (
     <section className="toolbar-card">
@@ -71,27 +111,51 @@ export default function DashboardToolbar() {
           </label>
         </div>
 
-        <div className="col-12 col-xl-6">
-          <label className="control-field">
-            <span className="control-label">Compare with</span>
-            <span className="control-help">
-              Used on the Evidence view to compare another Fed decision.
-            </span>
-            <select
-              className="form-select control-select"
-              value={comparisonEvent.id}
-              onChange={(event) => changeComparisonEvent(event.target.value)}
-            >
-              {data.events.map((option) => (
-                <option key={option.id} value={option.id}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-          </label>
-        </div>
+        {showRippleLens ? (
+          <div className="col-12 col-xl-6">
+            <label className="control-field">
+              <span className="control-label">Ripple lens</span>
+              <span className="control-help">
+                Choose which part of the ripple chart to emphasize.
+              </span>
+              <select
+                className="form-select control-select"
+                value={selectedLens.id}
+                onChange={(event) => changeLens(event.target.value)}
+              >
+                {data.lenses.map((lens) => (
+                  <option key={lens.id} value={lens.id}>
+                    {lens.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+        ) : null}
 
-        <div className="col-12 col-md-6 col-xl-4">
+        {showComparisonEvent ? (
+          <div className={evidenceControlColClass}>
+            <label className="control-field">
+              <span className="control-label">Compare with</span>
+              <span className="control-help">
+                Used on the Evidence view to compare another Fed decision.
+              </span>
+              <select
+                className="form-select control-select"
+                value={comparisonEvent.id}
+                onChange={(event) => changeComparisonEvent(event.target.value)}
+              >
+                {data.events.map((option) => (
+                  <option key={option.id} value={option.id}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+        ) : null}
+
+        <div className={indicatorColClass}>
           <label className="control-field">
             <span className="control-label">Indicator focus</span>
             <span className="control-help">
@@ -113,27 +177,7 @@ export default function DashboardToolbar() {
           </label>
         </div>
 
-        <div className="col-12 col-md-6 col-xl-4">
-          <label className="control-field">
-            <span className="control-label">Ripple lens</span>
-            <span className="control-help">
-              Choose which part of the ripple chart to emphasize.
-            </span>
-            <select
-              className="form-select control-select"
-              value={selectedLens.id}
-              onChange={(event) => changeLens(event.target.value)}
-            >
-              {data.lenses.map((lens) => (
-                <option key={lens.id} value={lens.id}>
-                  {lens.label}
-                </option>
-              ))}
-            </select>
-          </label>
-        </div>
-
-        <div className="col-12 col-md-6 col-xl-4">
+        <div className={valueStyleColClass}>
           <label className="control-field">
             <span className="control-label">Value style</span>
             <span className="control-help">
@@ -154,7 +198,7 @@ export default function DashboardToolbar() {
       <div className="timeline-shell">
         <div className="timeline-summary">
           <div>
-            <p className="eyebrow">Propagation Timeline</p>
+            <p className="eyebrow">{timelineEyebrow}</p>
             <h3>{getOffsetLabel(timelineOffsetMonths)}</h3>
             <p className="timeline-copy">
               Current playback point: {formatters.toMonthLabel(currentDate)}
@@ -167,7 +211,7 @@ export default function DashboardToolbar() {
               className="btn timeline-button"
               onClick={togglePlay}
             >
-              {isPlaying ? 'Pause ripple' : 'Play ripple'}
+              {isPlaying ? pauseLabel : playLabel}
             </button>
             <button
               type="button"
@@ -196,7 +240,7 @@ export default function DashboardToolbar() {
         />
 
         <div className="timeline-quick-row">
-          {QUICK_OFFSETS.filter((offset) => offset <= maxTimelineOffsetMonths).map(
+          {quickOffsets.filter((offset) => offset <= maxTimelineOffsetMonths).map(
             (offset) => (
               <button
                 type="button"
@@ -209,7 +253,7 @@ export default function DashboardToolbar() {
                   changeTimelineOffset(offset);
                 }}
               >
-                {offset === 0 ? '0m' : `${offset}m`}
+                {getChipLabel(offset)}
               </button>
             ),
           )}

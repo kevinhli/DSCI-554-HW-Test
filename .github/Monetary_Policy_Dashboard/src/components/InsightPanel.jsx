@@ -16,7 +16,6 @@ export default function InsightPanel() {
   const {
     data,
     selectedEvent,
-    comparisonEvent,
     selectedIndicator,
     selectedIndicatorSnapshot,
     selectedLens,
@@ -122,11 +121,11 @@ export default function InsightPanel() {
         </article>
 
         <article className="story-note-card">
-          <span className="metric-label">Comparison event</span>
-          <strong>{comparisonEvent.label}</strong>
+          <span className="metric-label">Current timeline month</span>
+          <strong>{formatters.toMonthLabel(currentDate)}</strong>
           <p>
-            This gives you a second policy pulse to contrast against the same
-            indicator and timeline offset.
+            The ripple view is currently showing {timelineOffsetMonths} months
+            after the main event.
           </p>
         </article>
       </div>

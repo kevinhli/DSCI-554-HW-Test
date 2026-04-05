@@ -381,7 +381,7 @@ def build_clean_outputs(fred_api_key: str, start_date: str, end_date: str) -> No
             "lens_id": "full-cascade",
             "value_mode": "zscore",
             "timeline_offset_months": 6,
-            "max_timeline_offset_months": 18,
+            "max_timeline_offset_months": 36,
         },
     }
 

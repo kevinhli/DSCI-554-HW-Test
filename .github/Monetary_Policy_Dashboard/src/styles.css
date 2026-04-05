@@ -86,9 +86,14 @@ input {
 
 .hero-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1.65fr) minmax(0, 1fr);
-  gap: 1.25rem;
-  align-items: start;
+  grid-template-columns: minmax(0, 1.55fr) minmax(280px, 1fr) auto;
+  grid-template-areas: "copy stats flag";
+  gap: 1.65rem;
+  align-items: center;
+}
+
+.hero-copy-block {
+  grid-area: copy;
 }
 
 .eyebrow,
@@ -146,9 +151,44 @@ input {
 }
 
 .hero-stats {
+  grid-area: stats;
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-areas:
+    "series events"
+    "coverage coverage";
   gap: 0.85rem;
+  transform: translateX(-70px);
+}
+
+.hero-stat-card:nth-child(1) {
+  grid-area: series;
+}
+
+.hero-stat-card:nth-child(2) {
+  grid-area: events;
+}
+
+.hero-stat-card:nth-child(3) {
+  grid-area: coverage;
+  justify-self: center;
+  width: min(100%, 220px);
+}
+
+.hero-flag-wrap {
+  grid-area: flag;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  padding-left: 0.55rem;
+  padding-right: 0.15rem;
+}
+
+.hero-flag-svg {
+  width: 128px;
+  height: auto;
+  display: block;
+  filter: drop-shadow(0 12px 20px rgba(20, 32, 45, 0.08));
 }
 
 .hero-stat-card,
@@ -910,7 +950,13 @@ input {
   .toolbar-heading,
   .card-header-row {
     grid-template-columns: 1fr;
-    flex-direction: column;
+  }
+
+  .hero-grid {
+    grid-template-areas:
+      "copy"
+      "stats"
+      "flag";
   }
 }
 
@@ -924,8 +970,26 @@ input {
     grid-template-columns: 1fr;
   }
 
+  .hero-stats {
+    grid-template-areas:
+      "series"
+      "events"
+      "coverage";
+    transform: none;
+  }
+
+  .hero-stat-card:nth-child(3) {
+    justify-self: stretch;
+    width: auto;
+  }
+
   .ripple-layout {
     grid-template-columns: 1fr;
+  }
+
+  .hero-flag-wrap {
+    justify-content: center;
+    transform: none;
   }
 
   .timeline-summary {
