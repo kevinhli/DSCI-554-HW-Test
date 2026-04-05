@@ -3,7 +3,7 @@
 ## How To Run On Your Computer (If Needed)
 
 1. Open PowerShell in the root of this repository.
-2. Set your FRED API key:
+2. Be sure to register for a FRED API key here: [https://fred.stlouisfed.org/docs/api/api_key.html](https://fred.stlouisfed.org/docs/api/api_key.html), then set your FRED API key with the command below:
    ```powershell
    $env:FRED_API_KEY="your_fred_api_key_here"
    ```

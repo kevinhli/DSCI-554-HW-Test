@@ -85,3 +85,4 @@ Updated on: 2026-04-04
 - Expanded the quick timeline checkpoints so Ripple Story now includes `2y` and `3y` after `18m`, and Charts And Comparison now includes an explicit `18m` step between `1y` and `2y`.
 - Relabeled the shared `18m` quick-select checkpoint to `1.5y` so the longer-range timeline chips read more consistently.
 - Rewrote the top README run section to show the exact PowerShell commands for setting the FRED key, starting the dashboard, and building production output.
+- Clarified the README run instructions by linking directly to the FRED API key registration page and explicitly telling users to set their key with the command shown in step 2.
