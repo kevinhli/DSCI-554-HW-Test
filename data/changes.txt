@@ -3,7 +3,7 @@ Updated on: 2026-04-04
 
 1. Repository structure cleanup
 - Moved the data build script from the repo root to `data/build_dashboard_data.py`.
-- Moved `GLOSSARY.txt` from `data/` to the repo root to match the desired top-level layout.
+- Moved `GLOSSARY.txt` back into `data/GLOSSARY.txt` so the glossary lives with the rest of the data assets.
 - Moved `changes.txt` from the repo root to `data/changes.txt` so the top level stays cleaner.
 - Removed the extra `run_dashboard.bat` wrapper and kept a single top-level launcher: `run_dashboard.ps1`.
 - Moved `fomc_events.csv` out of the old raw-data folder to `data/fomc_events.csv`.
@@ -78,3 +78,9 @@ Updated on: 2026-04-04
 - Raw economic series are no longer stored in the repository.
 - Cleaned CSVs and the event reference file stay outside the deployed app in the main `data/` folder.
 - The current repository data includes 28 indicator series plus 217 FOMC events.
+- Added a short numbered local-run section at the top of `README.md` explaining how to start the dashboard with `run_dashboard.ps1`.
+- Removed the `Start at the center` interpretation tile from the Ripple Story view because it was mostly static orientation text with little analytical value.
+- Removed the low-value `Follow the highlighted layers` guide tile and renamed `Validate with evidence` to `Time range` so the story-side guidance is shorter and clearer.
+- Moved the `Time range` explanation to the top of the Ripple Story interpretation panel, replaced the static `Coverage` card with a dynamic `Policy move` summary, and added a `Selected lens` card so the panel better reflects the active filters and time window.
+- Expanded the quick timeline checkpoints so Ripple Story now includes `2y` and `3y` after `18m`, and Charts And Comparison now includes an explicit `18m` step between `1y` and `2y`.
+- Relabeled the shared `18m` quick-select checkpoint to `1.5y` so the longer-range timeline chips read more consistently.

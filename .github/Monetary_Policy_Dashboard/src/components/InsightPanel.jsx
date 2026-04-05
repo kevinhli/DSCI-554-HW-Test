@@ -14,7 +14,6 @@ function formatResponseMetric(snapshot, valueMode, formatters) {
 
 export default function InsightPanel() {
   const {
-    data,
     selectedEvent,
     selectedIndicator,
     selectedIndicatorSnapshot,
@@ -28,22 +27,10 @@ export default function InsightPanel() {
   } = useDashboardStore();
 
   const focusLeader = focusSnapshots[0] ?? null;
-  const guideItems = [
-    {
-      title: 'Start at the center',
-      text: `${selectedEvent.label} anchors the ripple and defines month 0 for the rest of the dashboard.`,
-    },
-    {
-      title: 'Follow the highlighted layers',
-      text: selectedLens.description,
-    },
-    {
-      title: 'Validate with evidence',
-      text: `Use the timeline slider to see ${selectedIndicator.label} move from ${formatters.toMonthLabel(
-        selectedEvent.month,
-      )} to ${formatters.toMonthLabel(currentDate)}.`,
-    },
-  ];
+  const policyMoveLabel =
+    selectedEvent.basis_points > 0
+      ? `+${selectedEvent.basis_points} bp`
+      : `${selectedEvent.basis_points} bp`;
 
   return (
     <section className="dashboard-card h-100">
@@ -57,6 +44,19 @@ export default function InsightPanel() {
           drawn from the cleaned data and the glossary definitions in the repo.
         </p>
       </div>
+
+      <article className="guide-item guide-item-featured">
+        <h3>Time range</h3>
+        <p>
+          The current story window runs from{' '}
+          {formatters.toMonthLabel(selectedEvent.month)} to{' '}
+          {formatters.toMonthLabel(currentDate)}, which is{' '}
+          {timelineOffsetMonths === 1
+            ? '1 month'
+            : `${timelineOffsetMonths} months`}{' '}
+          after the selected event.
+        </p>
+      </article>
 
       <div className="metrics-grid">
         <article className="metric-card">
@@ -92,23 +92,14 @@ export default function InsightPanel() {
         </article>
 
         <article className="metric-card">
-          <span className="metric-label">Coverage</span>
-          <strong>
-            {data.meta.series_count} series / {data.meta.event_count} FOMC events
-          </strong>
+          <span className="metric-label">Policy move</span>
+          <strong>{policyMoveLabel}</strong>
           <p>
-            Monthly-aligned static assets generated for GitHub Pages deployment.
+            Rates moved from {formatters.formatCompactNumber(selectedEvent.rate_before)} to{' '}
+            {formatters.formatCompactNumber(selectedEvent.rate_after)} at the selected
+            FOMC event.
           </p>
         </article>
-      </div>
-
-      <div className="guide-list">
-        {guideItems.map((item) => (
-          <article className="guide-item" key={item.title}>
-            <h3>{item.title}</h3>
-            <p>{item.text}</p>
-          </article>
-        ))}
       </div>
 
       <div className="comparison-story-grid">
@@ -127,6 +118,12 @@ export default function InsightPanel() {
             The ripple view is currently showing {timelineOffsetMonths} months
             after the main event.
           </p>
+        </article>
+
+        <article className="story-note-card">
+          <span className="metric-label">Selected lens</span>
+          <strong>{selectedLens.label}</strong>
+          <p>{selectedLens.description}</p>
         </article>
       </div>
 

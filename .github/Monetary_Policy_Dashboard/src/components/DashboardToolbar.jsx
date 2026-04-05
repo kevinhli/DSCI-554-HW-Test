@@ -1,7 +1,7 @@
 import { useDashboardStore } from '../store/DashboardStore';
 
-const STORY_QUICK_OFFSETS = [0, 3, 6, 12, 18];
-const EVIDENCE_QUICK_OFFSETS = [0, 3, 6, 12, 24, 36];
+const STORY_QUICK_OFFSETS = [0, 3, 6, 12, 18, 24, 36];
+const EVIDENCE_QUICK_OFFSETS = [0, 3, 6, 12, 18, 24, 36];
 
 function getOffsetLabel(offset) {
   if (offset === 0) {
@@ -26,6 +26,10 @@ function getOffsetLabel(offset) {
 function getChipLabel(offset) {
   if (offset === 0) {
     return '0m';
+  }
+
+  if (offset === 18) {
+    return '1.5y';
   }
 
   if (offset >= 12 && offset % 12 === 0) {
