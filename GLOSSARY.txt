@@ -1,0 +1,136 @@
+Policy Ripple -- Glossary / Cheat Sheet
+(Internal Reference Only -- Not for the Paper)
+
+========================================
+INSTITUTIONS & DATA SOURCES
+========================================
+
+The Fed / Federal Reserve
+  The central bank of the United States. Sets interest rates and controls monetary policy.
+
+FOMC (Federal Open Market Committee)
+  The Fed's policy-making body. Meets ~8 times per year to decide whether to raise, lower, or hold interest rates.
+
+FRED
+  Federal Reserve Economic Data. A free public database of 800,000+ economic time series, maintained by the Federal Reserve Bank of St. Louis.
+
+========================================
+RATES & YIELDS
+========================================
+
+Federal Funds Rate (DFF)
+  The interest rate banks charge each other for overnight loans. This is the rate the Fed directly controls -- the "center of the ripple."
+
+Fed Funds Target Range (DFEDTARU / DFEDTARL)
+  The upper and lower bounds the Fed sets for the Federal Funds Rate. The actual rate (DFF) floats within this band.
+
+Treasury Yields (DGS2, DGS10, DGS30)
+  Interest rates on U.S. government bonds at 2-year, 10-year, and 30-year maturities. Considered "risk-free" rates; everything else is priced relative to these.
+
+Yield Curve Spread (T10Y2Y)
+  The difference between the 10-year and 2-year Treasury yields. When this goes negative ("inverted yield curve"), it historically signals a coming recession.
+
+Baa Corporate Bond Yield (BAA)
+  The interest rate on corporate bonds rated Baa by Moody's (the lowest tier of "investment grade"). Shows how much more companies pay to borrow compared to the government.
+
+Bank Prime Rate (DPRIME)
+  The base interest rate banks offer their most creditworthy customers. Moves almost in lockstep with the Fed Funds Rate.
+
+30-Year Mortgage Rate (MORTGAGE30US)
+  The average interest rate on a 30-year fixed-rate home loan. Directly affects housing affordability.
+
+========================================
+MONEY SUPPLY
+========================================
+
+M2 Money Stock (M2SL)
+  A measure of all the money in circulation -- cash, checking accounts, savings accounts, money market funds, and small CDs. When the Fed does "quantitative easing" (printing money / buying bonds), M2 expands. When they tighten, it contracts.
+
+========================================
+MARKET INDICES
+========================================
+
+S&P 500 (^GSPC)
+  An index tracking the 500 largest U.S. public companies. The most widely used benchmark for overall U.S. stock market performance.
+
+Dow Jones Industrial Average (^DJI)
+  An index of 30 large U.S. companies. Older and narrower than the S&P 500 but still widely cited.
+
+VIX (^VIX)
+  The "fear index." Measures expected stock market volatility over the next 30 days. Spikes during uncertainty (e.g., surprise rate decisions, crises).
+
+========================================
+ETFs (EXCHANGE-TRADED FUNDS)
+========================================
+
+ETF
+  A fund that trades on a stock exchange like a regular stock but holds a basket of assets (stocks, bonds, commodities). Lets you buy exposure to a whole category in one ticker.
+
+GLD -- SPDR Gold Shares ETF
+  Tracks the price of gold. Gold is a classic "safe haven" -- investors buy it when they're worried about inflation or instability.
+
+VEU -- Vanguard FTSE All-World ex-US ETF
+  Tracks stock markets in every developed country except the U.S. Shows how Fed decisions spill over globally.
+
+EEM -- iShares MSCI Emerging Markets ETF
+  Tracks stocks in developing economies (China, India, Brazil, etc.). Emerging markets are especially sensitive to Fed rate changes because higher U.S. rates pull investment capital out of these countries.
+
+XLF -- Financial Select Sector SPDR
+  Tracks banks and financial companies. Banks profit more when rates are higher (wider lending margins).
+
+XLRE -- Real Estate Select Sector SPDR
+  Tracks real estate companies/REITs. Higher rates hurt real estate (more expensive mortgages = less buying).
+
+XLK -- Technology Select Sector SPDR
+  Tracks tech companies. Tech stocks are sensitive to rates because their valuations depend heavily on future earnings discounted at the current rate.
+
+XLE -- Energy Select Sector SPDR
+  Tracks oil/gas/energy companies. Less directly tied to rates but affected by economic growth expectations.
+
+XLU -- Utilities Select Sector SPDR
+  Tracks utility companies. Utilities carry heavy debt, so higher rates increase their borrowing costs. Also competes with bonds for income-seeking investors.
+
+========================================
+ALTERNATIVE ASSETS
+========================================
+
+Bitcoin (BTC-USD)
+  A decentralized digital currency. Its relationship with Fed policy is debated -- sometimes it behaves like "digital gold" (inflation hedge), other times like a high-risk tech stock. During 2022 rate hikes, it crashed ~65%.
+
+========================================
+ECONOMIC INDICATORS
+========================================
+
+Unemployment Rate (UNRATE)
+  Percentage of the labor force that is jobless and actively looking for work.
+
+Nonfarm Payrolls (PAYEMS)
+  Total number of paid U.S. workers excluding farm workers. The single most watched monthly jobs number.
+
+CPI (CPIAUCSL)
+  Consumer Price Index. Measures inflation by tracking the average price of a basket of consumer goods (food, rent, gas, etc.).
+
+PCE Price Index (PCEPI)
+  Personal Consumption Expenditures Price Index. The Fed's preferred inflation measure (slightly different methodology than CPI, tends to run lower).
+
+Housing Starts (HOUST)
+  Number of new residential construction projects started each month. A leading indicator for the housing market and broader economy.
+
+========================================
+OTHER TERMS
+========================================
+
+Basis Point (bp)
+  1/100th of a percentage point. A 25bp rate hike means rates went up by 0.25%. Financial people say "basis points" instead of percentages to avoid ambiguity.
+
+Quantitative Easing (QE)
+  When the Fed buys bonds (and other assets) to inject money into the economy. Expands M2. Used during crises (2008, 2020).
+
+Quantitative Tightening (QT)
+  The reverse of QE -- the Fed lets bonds mature or sells them, pulling money out of the economy. Contracts M2.
+
+Sankey Diagram
+  A flow diagram where the width of arrows/ribbons is proportional to the quantity flowing. Used in economics to show money moving between sectors.
+
+Z-score Normalization
+  A way to make different datasets comparable by converting each value to "how many standard deviations is this from the mean?" Lets you put unemployment (measured in %) and S&P 500 (measured in points) on the same scale.

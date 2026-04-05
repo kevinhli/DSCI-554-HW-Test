@@ -1,0 +1,64 @@
+Policy Ripple Repository Changes
+Updated on: 2026-04-04
+
+1. Repository structure cleanup
+- Moved the data build script from the repo root to `data/build_dashboard_data.py`.
+- Moved `GLOSSARY.txt` from `data/` to the repo root to match the desired top-level layout.
+- Moved `changes.txt` from the repo root to `data/changes.txt` so the top level stays cleaner.
+- Removed the extra `run_dashboard.bat` wrapper and kept a single top-level launcher: `run_dashboard.ps1`.
+- Moved `fomc_events.csv` out of the old raw-data folder to `data/fomc_events.csv`.
+- Deleted the stored FRED and Yahoo raw series CSVs and removed the `data/raw data/` folder.
+
+2. Data pipeline and dashboard wiring
+- Added a Python preprocessing pipeline that:
+  - reads CSVs from `data/raw data/`
+  - aligns all series to a monthly timeline
+  - writes cleaned combined outputs into `data/cleaned data/`
+  - copies a frontend-ready JSON file into `.github/Monetary_Policy_Dashboard/public/data/dashboard-data.json`
+- The React dashboard now reads that generated JSON and uses it for:
+  - event selection
+  - timeline scrubbing
+  - radial cascade segments
+  - linked indicator charting
+  - event comparison
+- Improved the radial cascade readability by adding a ring key under the hero visualization.
+- The ring key now groups every wedge by ring, shows color-matched indicator pills, and lets users click an indicator name to focus that section across the dashboard.
+- Made the dashboard layout wider so the hero chart and evidence panels have more room.
+- Added direct short labels onto the ring wedges themselves.
+- Added hover/click glossary context for wedges so the chart now shows:
+  - a plain-English definition
+  - a simple example
+  - the current standardized shift at the selected playback month
+- Moved the glossary focus content out of the ripple chart and into a dedicated left-side reading tile.
+- Added the inner-ring, middle-ring, and outer-ring descriptions into that left-side tile so the ripple itself stays visually cleaner.
+- Removed the now-redundant grouped ring-key section below the ripple chart once the left-side reading tile and direct wedge labels were in place.
+- Changed the glossary panel's default state so it now starts with an instructional message instead of preloading one specific indicator definition.
+- Removed the default gold-highlighted mortgage-rate wedge so the ripple starts in a visually neutral state until the user hovers or explicitly selects an indicator.
+- Reordered the left-side ripple reading panel so the Glossary Focus section now appears above the How To Read / Ring Structure section.
+- Added a workspace view switcher so the dashboard can toggle between:
+  - a Ripple Explorer view
+  - an Evidence And Comparison view
+- Moved the Full-History Indicator Trace and Matched Event Scorecard onto the second view so the hero ripple page stays more focused.
+- Moved the story/evidence workspace switcher above Linked Controls so users choose a dashboard view before adjusting filters.
+- Reworded the workspace and control labels in plainer language, and added short helper text under each toolbar field to explain what it affects.
+
+3. API integration model
+- The dashboard is not making live browser calls to FRED or Yahoo.
+- Instead, the APIs are integrated into the optional Python data-build step:
+  - `python data/build_dashboard_data.py --fred-api-key <your_key>`
+  - or `FRED_API_KEY=<your_key>` and then `python data/build_dashboard_data.py`
+- FRED series:
+  - always fetched from the official `series/observations` API during the build
+  - uses the API key from `--fred-api-key` or `FRED_API_KEY`
+- Yahoo series:
+  - always fetched during the build through the `yfinance` Python library
+- FOMC events:
+  - kept as a static reference file in `data/fomc_events.csv`
+  - this preserves the full meeting list, including hold events, which is not cleanly available from the market-data APIs alone
+- After fetching, the script regenerates the static dashboard JSON used by GitHub Pages.
+
+4. Operational notes
+- GitHub Pages only needs the final generated JSON file in the dashboard app's `public/data` folder.
+- Raw economic series are no longer stored in the repository.
+- Cleaned CSVs and the event reference file stay outside the deployed app in the main `data/` folder.
+- The current repository data includes 28 indicator series plus 217 FOMC events.
