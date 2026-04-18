@@ -73,7 +73,7 @@ export default function HousingStateDetail({
               <span style={styles.statNote}>Compared with the same number of months before the meeting</span>
             </div>
             <div style={styles.stat}>
-              <span style={styles.statLabel}>Compared with typical LA neighborhood</span>
+              <span style={styles.statLabel}>Compared with median LA neighborhood</span>
               <strong style={styles.statValue}>{formatPercent(response.relativeToMedian)}</strong>
               <span style={styles.statNote}>{horizonLabel.toLowerCase()} after the meeting</span>
             </div>
@@ -152,7 +152,7 @@ export default function HousingStateDetail({
             </span>
             <span style={styles.legendItem}>
               <span style={{ ...styles.legendSwatch, background: T.textSecondary, borderStyle: "dashed" }} />
-              Typical LA path
+              Median LA path
             </span>
           </div>
         </>

@@ -15,15 +15,15 @@ const SOURCES = [
   },
   {
     name: "Zillow Neighborhood ZHVI",
-    detail: "Monthly smoothed neighborhood home values, matched to 86 Mapping L.A. neighborhoods for the interactive neighborhood map and comparison views.",
+    detail: "Monthly smoothed neighborhood home values, matched to Los Angeles neighborhoods plus Glendale, Pasadena, and Burbank for the interactive map and comparison views.",
   },
 ];
 
 const NOTES = [
   "Mortgage-rate response is measured with average rates in a 4-week window before the meeting and a 6-week window beginning 1 week after the meeting.",
   "Home-price response is measured with monthly Zillow neighborhood home values, so the dashboard compares the meeting month with 3, 6, or 12 months after it.",
-  "The neighborhood map shows either absolute post-event home-price change or cooling versus the same-length period before the meeting.",
-  "The timeline above the map uses cluster medians so viewers can see how different parts of Los Angeles moved over a significant pre/post-meeting window.",
+  "The neighborhood map shows either who outpaced the typical LA neighborhood after the meeting or who started slowing down compared with right before it.",
+  "The trend line below the map uses cluster medians so viewers can see how different parts of Los Angeles moved over a significant pre/post-meeting window.",
   "A simple analog forecast looks for similar earlier meetings using policy change, mortgage follow-through, and recent rate level, then summarizes what Los Angeles neighborhoods usually did next.",
   "This is a descriptive timing tool. It shows how policy, mortgage rates, and home prices moved around the same events, but it does not prove causation.",
 ];

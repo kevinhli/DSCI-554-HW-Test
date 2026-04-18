@@ -48,10 +48,9 @@ export default function HousingTransmissionBeat({
     <section className="dashboard-surface dash-card" style={styles.card}>
       <div style={styles.header}>
         <div>
-          <div style={styles.title}>How the pressure reached LA</div>
+          <div style={styles.title}>How it reached LA</div>
           <div style={styles.copy}>
-            The story is simple: policy changes borrowing costs first, then neighborhood
-            prices adjust with a lag.
+            Fed first, mortgages next, neighborhoods later.
           </div>
         </div>
       </div>
@@ -83,15 +82,15 @@ export default function HousingTransmissionBeat({
 
 const styles = {
   card: {
-    padding: 16,
-    marginBottom: 18,
+    padding: 14,
+    marginBottom: 12,
     overflow: "hidden",
   },
   header: {
     display: "flex",
     justifyContent: "space-between",
     gap: 16,
-    marginBottom: 14,
+    marginBottom: 10,
   },
   title: {
     color: T.textPrimary,
@@ -102,27 +101,27 @@ const styles = {
   },
   copy: {
     color: T.textSecondary,
-    fontSize: 12,
-    lineHeight: 1.45,
-    maxWidth: 760,
+    fontSize: 11.5,
+    lineHeight: 1.35,
+    maxWidth: 520,
   },
   trackWrap: {
     position: "relative",
     display: "grid",
     gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
-    gap: 12,
+    gap: 10,
   },
   trackLine: {
     position: "absolute",
     left: "10%",
     right: "10%",
-    top: 57,
+    top: 54,
     height: 1,
     background: `linear-gradient(90deg, transparent, ${T.cardBorder}, transparent)`,
   },
   pulse: {
     position: "absolute",
-    top: 51,
+    top: 48,
     left: "10%",
     width: 12,
     height: 12,
@@ -135,15 +134,15 @@ const styles = {
     position: "relative",
     display: "flex",
     flexDirection: "column",
-    gap: 8,
+    gap: 6,
   },
   node: {
     position: "relative",
-    minHeight: 106,
+    minHeight: 96,
     display: "flex",
     flexDirection: "column",
-    gap: 6,
-    padding: "13px 14px 13px 16px",
+    gap: 4,
+    padding: "12px 14px 12px 16px",
     borderRadius: 14,
     border: `1px solid ${T.cardBorder}`,
     background: `linear-gradient(135deg, ${T.cardBg}, ${T.cardBgAlt})`,
@@ -167,11 +166,15 @@ const styles = {
     fontSize: 18,
     lineHeight: 1.1,
     letterSpacing: "-0.03em",
+    minHeight: 38,
+    display: "flex",
+    alignItems: "center",
   },
   nodeNote: {
     color: T.textSecondary,
     fontSize: 11,
     lineHeight: 1.35,
+    marginTop: "auto",
   },
   lagLabel: {
     color: T.textDim,

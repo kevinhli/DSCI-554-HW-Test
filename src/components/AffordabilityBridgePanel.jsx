@@ -79,7 +79,7 @@ export default function AffordabilityBridgePanel({
 
       <div style={styles.summary}>
         Same payment buying power falls to {formatCurrency(affordability.samePaymentBudget)},
-        while a typical LA neighborhood path points to {formatCurrency(affordability.priceAdjustedTarget)}.
+        while a median LA neighborhood path points to {formatCurrency(affordability.priceAdjustedTarget)}.
       </div>
 
       <svg viewBox={`0 0 ${VB_W} ${VB_H}`} style={{ width: "100%", display: "block" }}>

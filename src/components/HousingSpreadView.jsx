@@ -129,11 +129,11 @@ export default function HousingSpreadView({
     <section className="dashboard-surface" style={styles.card}>
       <div style={styles.header}>
         <div>
-          <div style={styles.title}>Neighborhood spread</div>
+          <div style={styles.title}>Where neighborhoods landed</div>
           <div style={styles.copy}>
-            Each dot is a neighborhood. Higher dots mean larger home-price increases after
-            the meeting. The center band shows the middle half of LA neighborhoods, and the
-            bright line tracks the selected neighborhood over time.
+            Each dot is a neighborhood. Higher dots mean stronger price growth after the
+            meeting. The center band shows the middle half of LA neighborhoods, and the
+            bright line tracks your selected neighborhood over time.
           </div>
         </div>
       </div>
@@ -328,7 +328,7 @@ export default function HousingSpreadView({
         </span>
         <span style={styles.legendItem}>
           <span style={styles.medianRule} />
-          Typical LA path
+          Median LA path
         </span>
       </div>
     </section>

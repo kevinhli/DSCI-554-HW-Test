@@ -28,6 +28,13 @@ export const LA_CLUSTERS = [
     description: "Eastside neighborhoods show where momentum can shift quickly after borrowing costs rise.",
   },
   {
+    id: "foothill",
+    label: "Nearby cities",
+    shortLabel: "Nearby",
+    color: "#f472b6",
+    description: "Glendale, Pasadena, Burbank, and Santa Monica add the nearby city markets many viewers expect to compare against Los Angeles neighborhoods.",
+  },
+  {
     id: "south",
     label: "South Los Angeles",
     shortLabel: "South LA",
@@ -103,6 +110,12 @@ export const LA_NEIGHBORHOODS = [
     name: 'Boyle Heights',
     shortLabel: 'Boyle Heights',
     clusterId: 'east',
+  },
+  {
+    id: 'burbank',
+    name: 'Burbank',
+    shortLabel: 'Burbank',
+    clusterId: 'foothill',
   },
   {
     id: 'brentwood',
@@ -253,6 +266,12 @@ export const LA_NEIGHBORHOODS = [
     name: 'Glassell Park',
     shortLabel: 'Glassell Park',
     clusterId: 'east',
+  },
+  {
+    id: 'glendale',
+    name: 'Glendale',
+    shortLabel: 'Glendale',
+    clusterId: 'foothill',
   },
   {
     id: 'gramercy-park',
@@ -465,6 +484,12 @@ export const LA_NEIGHBORHOODS = [
     clusterId: 'westside',
   },
   {
+    id: 'pasadena',
+    name: 'Pasadena',
+    shortLabel: 'Pasadena',
+    clusterId: 'foothill',
+  },
+  {
     id: 'pacoima',
     name: 'Pacoima',
     shortLabel: 'Pacoima',
@@ -529,6 +554,12 @@ export const LA_NEIGHBORHOODS = [
     name: 'San Pedro',
     shortLabel: 'San Pedro',
     clusterId: 'harbor',
+  },
+  {
+    id: 'santa-monica',
+    name: 'Santa Monica',
+    shortLabel: 'Santa Monica',
+    clusterId: 'foothill',
   },
   {
     id: 'sawtelle',

@@ -31,10 +31,10 @@ function mixColors(start, end, t) {
 
 function metricColor(value, scaleMax) {
   if (value == null || Number.isNaN(value)) return "rgba(71,74,82,0.62)";
-  const normalized = clamp(Math.abs(value) / Math.max(scaleMax, 0.001), 0, 1);
-  if (normalized < 0.16) return "rgba(104,104,113,0.9)";
-  if (value < 0) return mixColors("#243247", "#4f8cff", normalized ** 0.82);
-  if (value > 0) return mixColors("#55381d", "#f59e0b", normalized ** 0.82);
+  const normalized = clamp(Math.abs(value) / Math.max(scaleMax, 0.03), 0, 1);
+  if (normalized < 0.08) return "rgba(104,104,113,0.84)";
+  if (value < 0) return mixColors("#2d4160", "#66a9ff", normalized ** 0.78);
+  if (value > 0) return mixColors("#6f4517", "#ffb11f", normalized ** 0.78);
   return "rgba(82,82,91,0.95)";
 }
 
@@ -44,18 +44,6 @@ function brighten(color, amount = 0.22) {
 
 function darken(color, amount = 0.28) {
   return mixColors(color, "#0b0d12", amount);
-}
-
-function findClusterInsight(clusterSummaries) {
-  if (!clusterSummaries?.length) return null;
-  const strongestCooling = [...clusterSummaries]
-    .filter((item) => item.summary?.medianAcceleration != null)
-    .sort((left, right) => left.summary.medianAcceleration - right.summary.medianAcceleration)[0];
-  const firmest = [...clusterSummaries]
-    .filter((item) => item.summary?.medianChange != null)
-    .sort((left, right) => right.summary.medianChange - left.summary.medianChange)[0];
-  if (!strongestCooling || !firmest) return null;
-  return `${strongestCooling.clusterLabel} cooled the most, while ${firmest.clusterLabel} held up best.`;
 }
 
 function timelineTooltipRows(clusterSeries, selectedSeries, offset) {
@@ -122,13 +110,13 @@ function metricContext(metricMode) {
       colorAccessor: (response) => response.acceleration,
       heightAccessor: (response) => Math.abs(response.acceleration ?? 0),
       headline:
-        "Blue neighborhoods slowed more than they had before the meeting. Warm neighborhoods kept gaining speed.",
+        "Blue neighborhoods started slowing down after the meeting. Warm neighborhoods kept picking up speed.",
       subCopy:
-        "Fill color compares each neighborhood's growth after the meeting with the same-length period before it.",
-      legendStart: "Slowed more",
+        "Color shows whether each neighborhood's price growth slowed down or sped up compared with right before the meeting.",
+      legendStart: "Started slowing down",
       legendEnd: "Kept speeding up",
-      heightCopy: "Column height = size of the growth-pace shift",
-      tooltipComparisonLabel: "Pace shift",
+      heightCopy: "Taller columns = bigger slowdown or speed-up",
+      tooltipComparisonLabel: "Change in pace",
     };
   }
 
@@ -136,12 +124,13 @@ function metricContext(metricMode) {
     colorAccessor: (response) => response.relativeToMedian,
     heightAccessor: (response) => Math.abs(response.relativeToMedian ?? 0),
     headline:
-      "Orange neighborhoods beat the typical LA neighborhood after the meeting. Blue neighborhoods lagged the local pack.",
-    subCopy: "Fill color shows whether each neighborhood finished above or below the typical LA move.",
-    legendStart: "Below typical LA",
-    legendEnd: "Above typical LA",
-    heightCopy: "Column height = distance from the typical LA move",
-    tooltipComparisonLabel: "Versus typical LA",
+      "Orange neighborhoods rose more than the median LA neighborhood. Blue neighborhoods rose less than the median LA path.",
+    subCopy:
+      "Color compares each neighborhood with the median LA neighborhood over the same months after the meeting.",
+    legendStart: "Weaker than median LA",
+    legendEnd: "Stronger than median LA",
+    heightCopy: "Taller columns = bigger gap from the median LA move",
+    tooltipComparisonLabel: "Compared with median LA",
   };
 }
 
@@ -155,10 +144,17 @@ export default function NeighborhoodHexMap({
   onSelectState,
   clusterSeries,
   selectedNeighborhoodSeries,
+  playbackDay,
+  effectivePlaybackDay,
+  playbackLabel,
+  isPlaying,
+  onPlaybackChange,
+  onTogglePlayback,
 }) {
   const [tooltip, setTooltip] = useState(null);
   const [timelineHover, setTimelineHover] = useState(null);
   const context = metricContext(metricMode);
+  const displayedPlaybackDay = effectivePlaybackDay ?? (playbackDay === 0 ? 1 : playbackDay);
 
   const responseMap = useMemo(
     () => new Map((responses || []).map((response) => [response.stateCode, response])),
@@ -201,46 +197,16 @@ export default function NeighborhoodHexMap({
   }, [features, path, responseMap]);
 
   const selectedNeighborhood = responseMap.get(selectedStateCode) || responses?.[0] || null;
-  const clusterSummaries = responses?.length
-    ? Object.values(
-        responses.reduce((acc, response) => {
-          if (!acc[response.clusterId]) {
-            acc[response.clusterId] = {
-              clusterId: response.clusterId,
-              clusterLabel: response.clusterLabel,
-              color: LA_CLUSTER_BY_ID[response.clusterId]?.color,
-              values: [],
-            };
-          }
-          acc[response.clusterId].values.push(response);
-          return acc;
-        }, {})
-      ).map((cluster) => ({
-        ...cluster,
-        summary: {
-          medianChange:
-            cluster.values
-              .map((item) => item.changePct)
-              .sort((left, right) => left - right)[Math.floor(cluster.values.length / 2)] ?? null,
-          medianAcceleration:
-            cluster.values
-              .filter((item) => item.acceleration != null)
-              .map((item) => item.acceleration)
-              .sort((left, right) => left - right)[
-              Math.floor(
-                cluster.values.filter((item) => item.acceleration != null).length / 2
-              )
-            ] ?? null,
-        },
-      }))
-    : [];
-
+  const hasSelection = Boolean(selectedStateCode);
+  const selectedEntry =
+    featureEntries.find((entry) => entry.feature.properties.code === selectedStateCode) || null;
+  const selectedLabel = selectedNeighborhood?.shortLabel || selectedNeighborhood?.stateName || "Selected";
+  const selectedLabelWidth = Math.max(88, selectedLabel.length * 7.1 + 18);
   const allMetricValues = (responses || [])
     .map((response) => colorAccessor(response))
     .filter((value) => value != null);
   const scaleMax = Math.max(
-    1,
-    ...(allMetricValues.length ? allMetricValues.map((value) => Math.abs(value)) : [1])
+    ...(allMetricValues.length ? allMetricValues.map((value) => Math.abs(value)) : [0.03])
   );
   const columnValues = (responses || []).map((response) => heightAccessor(response));
   const columnExtent = extent(
@@ -251,10 +217,7 @@ export default function NeighborhoodHexMap({
       0,
       columnExtent[1] != null && columnExtent[1] > 0 ? columnExtent[1] : 1,
     ])
-    .range([8, 64]);
-
-  const mapHeadline = context.headline;
-  const insight = findClusterInsight(clusterSummaries);
+    .range([14, 90]);
 
   const offsets = [
     ...(selectedNeighborhoodSeries || []).map((point) => point.offset),
@@ -298,6 +261,9 @@ export default function NeighborhoodHexMap({
 
   const matchedNeighborhoodCount = responses?.length || 0;
   const coverageShare = features?.length ? matchedNeighborhoodCount / features.length : 0;
+  const belowTypicalShare = responses?.length
+    ? responses.filter((response) => (response.relativeToMedian ?? 0) < 0).length / responses.length
+    : 0;
   const baselineValues = (responses || [])
     .map((response) => response.baselineValue)
     .filter((value) => value != null);
@@ -313,29 +279,312 @@ export default function NeighborhoodHexMap({
 
   return (
     <section className="dashboard-surface" style={styles.card}>
-      <div style={styles.header}>
-        <div style={styles.title}>Los Angeles neighborhood map</div>
-        <div style={styles.copy}>
-          Real Mapping L.A. neighborhood boundaries, colored by what happened after the
-          meeting. Small hex columns show which neighborhoods already carried higher home
-          values when the meeting happened.
+      <div style={styles.legendRow}>
+        <span style={styles.scaleLabel}>{context.legendStart}</span>
+        <div style={styles.scaleTrack}>
+          <div style={styles.scaleBlue} />
+          <div style={styles.scaleNeutral} />
+          <div style={styles.scaleWarm} />
+        </div>
+        <span style={styles.scaleLabel}>{context.legendEnd}</span>
+        <span style={styles.heightCopy}>{context.heightCopy}</span>
+      </div>
+
+      <div style={styles.playbackCard}>
+        <div style={styles.playbackHeader}>
+          <div>
+            <div style={styles.subTitle}>First 90 days after the meeting</div>
+            <div style={styles.subCopy}>
+              Day-by-day playback, interpolated from monthly home-value readings.
+            </div>
+          </div>
+          <button type="button" className="ghost-button" style={styles.playButton} onClick={onTogglePlayback}>
+            {isPlaying ? "Pause" : "Play"}
+          </button>
+        </div>
+        <div style={styles.playbackRow}>
+          <input
+            type="range"
+            min="0"
+            max="90"
+            step="1"
+            value={playbackDay}
+            onChange={(event) => onPlaybackChange?.(Number(event.target.value))}
+            style={styles.playbackSlider}
+            aria-label="Days after the meeting shown on the map"
+          />
+          <span style={styles.playbackValue}>{playbackLabel}</span>
+        </div>
+        <div style={styles.playbackTicks}>
+          <span>Day 0</span>
+          <span>Day 30</span>
+          <span>Day 60</span>
+          <span>Day 90</span>
         </div>
       </div>
 
-      <div style={styles.headline}>
-        <strong style={styles.headlineLead}>{mapHeadline}</strong>
-        {insight ? <span style={styles.headlineTail}>{insight}</span> : null}
+      <div style={styles.mapFrame}>
+        <svg
+          viewBox={`0 0 ${MAP_VB_W} ${MAP_VB_H}`}
+          style={{ width: "100%", display: "block" }}
+          onMouseLeave={() => setTooltip(null)}
+        >
+          {featureEntries.map((entry) => {
+            const metricValue = entry.response ? colorAccessor(entry.response) : null;
+            const fill = metricColor(metricValue, scaleMax);
+            const isSelected = entry.feature.properties.code === selectedStateCode;
+            const hasData = Boolean(entry.response);
+
+            return (
+              <g key={`${entry.feature.properties.code}-${animationKey || "base"}-fill`}>
+                {isSelected ? (
+                  <>
+                    <path
+                      d={entry.pathData}
+                      fill="none"
+                      stroke="rgba(34,211,238,0.22)"
+                      strokeWidth={12}
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      opacity={1}
+                      pointerEvents="none"
+                    />
+                    <path
+                      d={entry.pathData}
+                      fill="rgba(34,211,238,0.12)"
+                      stroke="rgba(12,17,24,0.92)"
+                      strokeWidth={4.2}
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      opacity={1}
+                      pointerEvents="none"
+                    />
+                  </>
+                ) : null}
+                <path
+                  d={entry.pathData}
+                  fill={fill}
+                  stroke={isSelected ? "rgba(255,255,255,0.98)" : "rgba(18,20,24,0.9)"}
+                  strokeWidth={isSelected ? 2.8 : 1}
+                  opacity={!hasData ? 0.32 : isSelected ? 1 : hasSelection ? 0.54 : 0.96}
+                  style={{
+                    cursor: hasData ? "pointer" : "default",
+                    animation: `mapStateFadeIn 560ms cubic-bezier(0.22, 1, 0.36, 1) ${
+                      entry.delay
+                    }ms both`,
+                    transition: "fill 420ms ease, stroke 420ms ease, opacity 320ms ease",
+                    filter: isSelected
+                      ? "drop-shadow(0 0 14px rgba(34,211,238,0.36))"
+                      : "none",
+                  }}
+                  onClick={() => hasData && onSelectState?.(entry.feature.properties.code)}
+                  onMouseMove={(event) =>
+                    setTooltip({
+                      x: event.nativeEvent.offsetX,
+                      y: event.nativeEvent.offsetY,
+                      feature: entry.feature,
+                      response: entry.response,
+                    })
+                  }
+                />
+              </g>
+            );
+          })}
+
+          {featureEntries
+            .filter((entry) => entry.response)
+            .map((entry, index) => {
+              const color = metricColor(colorAccessor(entry.response), scaleMax);
+              const radius = entry.feature.properties.code === selectedStateCode ? 8.4 : 5.2;
+              const height = columnHeight(heightAccessor(entry.response));
+              const base = hexVertices(entry.centroid.x, entry.centroid.y, radius);
+              const top = hexVertices(entry.centroid.x, entry.centroid.y - height, radius);
+              const isSelected = entry.feature.properties.code === selectedStateCode;
+
+            return (
+              <g
+                key={`${entry.feature.properties.code}-${animationKey || "base"}-column`}
+                pointerEvents="none"
+                opacity="0"
+                style={{
+                  animation: `chartOpacityIn 420ms ease ${160 + entry.delay + index * 2}ms both`,
+                }}
+              >
+                {isSelected ? (
+                  <>
+                    <polygon
+                      points={polygonPoints(top)}
+                      fill="none"
+                      stroke="rgba(34,211,238,0.46)"
+                      strokeWidth={6.2}
+                      opacity={0.98}
+                    />
+                    <line
+                      x1={entry.centroid.x}
+                      x2={entry.centroid.x}
+                      y1={entry.centroid.y - height - 18}
+                      y2={entry.centroid.y - height - 4}
+                      stroke="rgba(255,255,255,0.72)"
+                      strokeWidth={1.6}
+                      strokeDasharray="2 3"
+                    />
+                  </>
+                ) : null}
+                {prismFaces(top, base).map((face, faceIndex) => (
+                  <polygon
+                    key={`${entry.feature.properties.code}-face-${faceIndex}`}
+                    points={polygonPoints(face)}
+                    fill={darken(color, 0.32 + faceIndex * 0.08)}
+                    opacity={isSelected ? 1 : hasSelection ? 0.42 : 0.84}
+                  />
+                ))}
+                <polygon
+                  points={polygonPoints(top)}
+                  fill={isSelected ? "rgba(34,211,238,0.92)" : brighten(color, 0.2)}
+                  stroke={isSelected ? "rgba(255,255,255,0.98)" : "rgba(255,255,255,0.18)"}
+                  strokeWidth={isSelected ? 1.8 : 0.8}
+                />
+              </g>
+            );
+          })}
+
+          {selectedEntry ? (
+            <g pointerEvents="none">
+              <circle
+                cx={selectedEntry.centroid.x}
+                cy={selectedEntry.centroid.y}
+                r={20}
+                fill="none"
+                stroke="rgba(34,211,238,0.3)"
+                strokeWidth={2}
+                strokeDasharray="5 4"
+                opacity={0.95}
+              />
+              <rect
+                x={selectedEntry.centroid.x - selectedLabelWidth / 2}
+                y={selectedEntry.centroid.y - 40}
+                width={selectedLabelWidth}
+                height={22}
+                rx={11}
+                fill="rgba(8,12,18,0.92)"
+                stroke="rgba(34,211,238,0.55)"
+                strokeWidth={1}
+              />
+              <text
+                x={selectedEntry.centroid.x}
+                y={selectedEntry.centroid.y - 25}
+                textAnchor="middle"
+                fill="rgba(230,249,255,0.98)"
+                fontSize="11.5"
+                fontWeight="700"
+                style={{ letterSpacing: "0.02em" }}
+              >
+                {selectedLabel}
+              </text>
+            </g>
+          ) : null}
+        </svg>
+
+        {tooltip ? (
+          <div
+            style={{
+              ...styles.tooltip,
+              left: Math.min(tooltip.x + 16, 710),
+              top: Math.max(tooltip.y - 18, 16),
+            }}
+          >
+            <strong style={styles.tooltipTitle}>{tooltip.feature.properties.name}</strong>
+            <span style={styles.tooltipBody}>{tooltip.feature.properties.clusterLabel}</span>
+            {tooltip.response ? (
+              <>
+                <span style={styles.tooltipBody}>
+                  Price change after meeting: {formatPercent(tooltip.response.changePct)}
+                </span>
+                <span style={styles.tooltipBody}>
+                  Change in pace: {formatPercent(tooltip.response.acceleration)}
+                </span>
+                <span style={styles.tooltipBody}>
+                  {context.tooltipComparisonLabel}:{" "}
+                  {formatPercent(
+                    metricMode === "acceleration"
+                      ? tooltip.response.acceleration
+                      : tooltip.response.relativeToMedian
+                  )}
+                </span>
+                <span style={styles.tooltipBody}>
+                  Meeting-month value:{" "}
+                  {tooltip.response.baselineValue?.toLocaleString("en-US", {
+                    style: "currency",
+                    currency: "USD",
+                    maximumFractionDigits: 0,
+                  })}
+                </span>
+              </>
+            ) : (
+              <span style={styles.tooltipBody}>
+                Boundary available, but this neighborhood does not have a direct matched
+                Zillow series in the current dataset.
+              </span>
+            )}
+          </div>
+        ) : null}
+      </div>
+
+      <div style={styles.bottomRow}>
+        <div style={styles.bottomStat}>
+          <span style={styles.bottomLabel}>Median neighborhood change</span>
+          <strong style={styles.bottomValue}>{formatPercent(summary?.medianChange)}</strong>
+        </div>
+        <div style={styles.bottomStat}>
+          <span style={styles.bottomLabel}>
+            {metricMode === "acceleration"
+              ? "Neighborhoods slowing down"
+              : "Below median LA"}
+          </span>
+          <strong style={styles.bottomValue}>
+            {formatShare(metricMode === "acceleration" ? summary?.coolingShare : belowTypicalShare)}
+          </strong>
+        </div>
+        <div style={styles.bottomStat}>
+          <span style={styles.bottomLabel}>Matched price coverage</span>
+          <strong style={styles.bottomValue}>
+            {matchedNeighborhoodCount} of {features.length}
+          </strong>
+          <span style={styles.bottomMeta}>
+            Median meeting-month value{" "}
+            {typicalMeetingValue?.toLocaleString("en-US", {
+              style: "currency",
+              currency: "USD",
+              maximumFractionDigits: 0,
+            }) || "N/A"}
+          </span>
+        </div>
+      </div>
+
+      <div style={styles.coverageNote}>
+        Matched price data now spans {formatShare(coverageShare)} of the mapped LA neighborhoods and nearby city areas.
       </div>
 
       <div style={styles.timelineCard}>
         <div style={styles.timelineHeader}>
           <div>
-            <div style={styles.subTitle}>Neighborhood and cluster timeline</div>
+            <div style={styles.subTitle}>Neighborhood trend line</div>
             <div style={styles.subCopy}>
-              Selected neighborhood versus cluster medians, indexed to the meeting month.
+              The bright line is your selected neighborhood. The gray lines show the broader neighborhood clusters around it.
             </div>
           </div>
           <div style={styles.timelineLegend}>
+            <span
+              style={{
+                ...styles.legendChip,
+                borderColor: "rgba(34,211,238,0.35)",
+                color: T.textPrimary,
+                background: "rgba(34,211,238,0.08)",
+              }}
+            >
+              <span style={{ ...styles.legendDot, background: T.accent }} />
+              Selected neighborhood
+            </span>
             {LA_CLUSTERS.map((cluster) => (
               <span
                 key={cluster.id}
@@ -343,19 +592,27 @@ export default function NeighborhoodHexMap({
                   ...styles.legendChip,
                   borderColor:
                     cluster.id === selectedNeighborhood?.clusterId
-                      ? `${cluster.color}88`
+                      ? "rgba(161,161,170,0.3)"
                       : T.cardBorder,
                   color:
                     cluster.id === selectedNeighborhood?.clusterId
                       ? T.textPrimary
                       : T.textSecondary,
                 }}
-              >
-                <span style={{ ...styles.legendDot, background: cluster.color }} />
-                {cluster.shortLabel}
-              </span>
-            ))}
-          </div>
+                >
+                <span
+                  style={{
+                    ...styles.legendDot,
+                    background:
+                      cluster.id === selectedNeighborhood?.clusterId
+                        ? "rgba(161,161,170,0.92)"
+                        : "rgba(113,113,122,0.82)",
+                  }}
+                />
+                  {cluster.shortLabel}
+                </span>
+              ))}
+            </div>
         </div>
 
         <div style={styles.timelineWrap}>
@@ -393,7 +650,7 @@ export default function NeighborhoodHexMap({
                 y2={TIMELINE_H}
                 stroke={T.accent}
                 strokeDasharray="5 5"
-                opacity="0.8"
+                opacity="0.65"
               />
 
               {(clusterSeries || []).map((cluster, index) => (
@@ -403,11 +660,11 @@ export default function NeighborhoodHexMap({
                   fill="none"
                   stroke={
                     cluster.clusterId === selectedNeighborhood?.clusterId
-                      ? cluster.color
-                      : mixColors(T.textMuted, "#d4d4d8", 0.08)
+                      ? "rgba(212,212,216,0.82)"
+                      : "rgba(113,113,122,0.55)"
                   }
-                  strokeWidth={cluster.clusterId === selectedNeighborhood?.clusterId ? 2.7 : 1.2}
-                  opacity={cluster.clusterId === selectedNeighborhood?.clusterId ? 0.95 : 0.42}
+                  strokeWidth={cluster.clusterId === selectedNeighborhood?.clusterId ? 2.2 : 1.1}
+                  opacity={cluster.clusterId === selectedNeighborhood?.clusterId ? 0.88 : 0.3}
                   strokeLinecap="round"
                   strokeLinejoin="round"
                   pathLength={1}
@@ -477,6 +734,15 @@ export default function NeighborhoodHexMap({
                   {selectedNeighborhood?.shortLabel || "Selected"}
                 </text>
               ) : null}
+
+              <line
+                x1={x(displayedPlaybackDay / 30)}
+                x2={x(displayedPlaybackDay / 30)}
+                y1={0}
+                y2={TIMELINE_H}
+                stroke="rgba(244,114,182,0.58)"
+                strokeDasharray="4 4"
+              />
 
               {ticks.map((tick) => (
                 <g key={tick} transform={`translate(${x(tick)},${TIMELINE_H})`}>
@@ -552,216 +818,14 @@ export default function NeighborhoodHexMap({
           ) : null}
         </div>
       </div>
-
-      <div style={styles.metaRow}>
-        <div>
-          <div style={styles.subTitle}>Neighborhood boundary map</div>
-          <div style={styles.subCopy}>
-            {context.subCopy}
-          </div>
-        </div>
-        <div style={styles.mapExplain}>
-          Gray neighborhoods are boundary-only because the Zillow neighborhood series did
-          not publish a direct match for them.
-        </div>
-      </div>
-
-      <div style={styles.legendRow}>
-        <span style={styles.scaleLabel}>{context.legendStart}</span>
-        <div style={styles.scaleTrack}>
-          <div style={styles.scaleBlue} />
-          <div style={styles.scaleNeutral} />
-          <div style={styles.scaleWarm} />
-        </div>
-        <span style={styles.scaleLabel}>{context.legendEnd}</span>
-        <span style={styles.heightCopy}>{context.heightCopy}</span>
-      </div>
-
-      <div style={styles.mapFrame}>
-        <svg
-          viewBox={`0 0 ${MAP_VB_W} ${MAP_VB_H}`}
-          style={{ width: "100%", display: "block" }}
-          onMouseLeave={() => setTooltip(null)}
-        >
-          {featureEntries.map((entry) => {
-            const metricValue = entry.response ? colorAccessor(entry.response) : null;
-            const fill = metricColor(metricValue, scaleMax);
-            const isSelected = entry.feature.properties.code === selectedStateCode;
-            const hasData = Boolean(entry.response);
-
-            return (
-              <path
-                key={`${entry.feature.properties.code}-${animationKey || "base"}-fill`}
-                d={entry.pathData}
-                fill={fill}
-                stroke={isSelected ? "rgba(255,255,255,0.92)" : "rgba(18,20,24,0.9)"}
-                strokeWidth={isSelected ? 2 : 1}
-                opacity={hasData ? 0.96 : 0.42}
-                style={{
-                  cursor: hasData ? "pointer" : "default",
-                  animation: `mapStateFadeIn 560ms cubic-bezier(0.22, 1, 0.36, 1) ${
-                    entry.delay
-                  }ms both`,
-                  transition: "fill 420ms ease, stroke 420ms ease, opacity 320ms ease",
-                }}
-                onClick={() => hasData && onSelectState?.(entry.feature.properties.code)}
-                onMouseMove={(event) =>
-                  setTooltip({
-                    x: event.nativeEvent.offsetX,
-                    y: event.nativeEvent.offsetY,
-                    feature: entry.feature,
-                    response: entry.response,
-                  })
-                }
-              />
-            );
-          })}
-
-          {featureEntries
-            .filter((entry) => entry.response)
-            .map((entry, index) => {
-              const color = metricColor(colorAccessor(entry.response), scaleMax);
-              const radius = entry.feature.properties.code === selectedStateCode ? 7.2 : 5.2;
-              const height = columnHeight(heightAccessor(entry.response));
-              const base = hexVertices(entry.centroid.x, entry.centroid.y, radius);
-              const top = hexVertices(entry.centroid.x, entry.centroid.y - height, radius);
-              const isSelected = entry.feature.properties.code === selectedStateCode;
-
-              return (
-                <g
-                  key={`${entry.feature.properties.code}-${animationKey || "base"}-column`}
-                  pointerEvents="none"
-                  opacity="0"
-                  style={{
-                    animation: `chartOpacityIn 420ms ease ${160 + entry.delay + index * 2}ms both`,
-                  }}
-                >
-                  {prismFaces(top, base).map((face, faceIndex) => (
-                    <polygon
-                      key={`${entry.feature.properties.code}-face-${faceIndex}`}
-                      points={polygonPoints(face)}
-                      fill={darken(color, 0.32 + faceIndex * 0.08)}
-                      opacity={isSelected ? 0.98 : 0.84}
-                    />
-                  ))}
-                  <polygon
-                    points={polygonPoints(top)}
-                    fill={brighten(color, isSelected ? 0.3 : 0.2)}
-                    stroke={isSelected ? "rgba(255,255,255,0.95)" : "rgba(255,255,255,0.18)"}
-                    strokeWidth={isSelected ? 1.4 : 0.8}
-                  />
-                </g>
-              );
-            })}
-        </svg>
-
-        {tooltip ? (
-          <div
-            style={{
-              ...styles.tooltip,
-              left: Math.min(tooltip.x + 16, 710),
-              top: Math.max(tooltip.y - 18, 16),
-            }}
-          >
-            <strong style={styles.tooltipTitle}>{tooltip.feature.properties.name}</strong>
-            <span style={styles.tooltipBody}>{tooltip.feature.properties.clusterLabel}</span>
-            {tooltip.response ? (
-              <>
-                <span style={styles.tooltipBody}>
-                  Later price change: {formatPercent(tooltip.response.changePct)}
-                </span>
-                <span style={styles.tooltipBody}>
-                  Growth shift: {formatPercent(tooltip.response.acceleration)}
-                </span>
-                <span style={styles.tooltipBody}>
-                  {context.tooltipComparisonLabel}:{" "}
-                  {formatPercent(
-                    metricMode === "acceleration"
-                      ? tooltip.response.acceleration
-                      : tooltip.response.relativeToMedian
-                  )}
-                </span>
-                <span style={styles.tooltipBody}>
-                  Meeting-month value:{" "}
-                  {tooltip.response.baselineValue?.toLocaleString("en-US", {
-                    style: "currency",
-                    currency: "USD",
-                    maximumFractionDigits: 0,
-                  })}
-                </span>
-              </>
-            ) : (
-              <span style={styles.tooltipBody}>
-                Boundary available, but this neighborhood does not have a direct matched
-                Zillow series in the current dataset.
-              </span>
-            )}
-          </div>
-        ) : null}
-      </div>
-
-      <div style={styles.bottomRow}>
-        <div style={styles.bottomStat}>
-          <span style={styles.bottomLabel}>Typical neighborhood move</span>
-          <strong style={styles.bottomValue}>{formatPercent(summary?.medianChange)}</strong>
-        </div>
-        <div style={styles.bottomStat}>
-          <span style={styles.bottomLabel}>Neighborhoods cooling</span>
-          <strong style={styles.bottomValue}>{formatShare(summary?.coolingShare)}</strong>
-        </div>
-        <div style={styles.bottomStat}>
-          <span style={styles.bottomLabel}>Matched price coverage</span>
-          <strong style={styles.bottomValue}>
-            {matchedNeighborhoodCount} of {features.length}
-          </strong>
-          <span style={styles.bottomMeta}>
-            Typical meeting-month value{" "}
-            {typicalMeetingValue?.toLocaleString("en-US", {
-              style: "currency",
-              currency: "USD",
-              maximumFractionDigits: 0,
-            }) || "N/A"}
-          </span>
-        </div>
-      </div>
-
-      <div style={styles.coverageNote}>
-        Coverage now spans {formatShare(coverageShare)} of the Mapping L.A. neighborhoods.
-      </div>
     </section>
   );
 }
 
 const styles = {
   card: { padding: 18 },
-  header: { marginBottom: 12 },
-  title: {
-    color: T.textPrimary,
-    fontSize: 18,
-    fontWeight: 700,
-    letterSpacing: "-0.03em",
-    marginBottom: 4,
-  },
-  copy: {
-    color: T.textSecondary,
-    fontSize: 12,
-    lineHeight: 1.5,
-    maxWidth: 780,
-  },
-  headline: {
-    display: "flex",
-    flexWrap: "wrap",
-    gap: 8,
-    marginBottom: 12,
-    padding: "12px 14px",
-    borderRadius: 14,
-    border: `1px solid ${T.cardBorder}`,
-    background: "rgba(255,255,255,0.03)",
-  },
-  headlineLead: { color: T.textPrimary, fontSize: 12.5, lineHeight: 1.5 },
-  headlineTail: { color: T.textSecondary, fontSize: 12.5, lineHeight: 1.5 },
   timelineCard: {
-    marginBottom: 14,
+    marginTop: 14,
     padding: "14px 14px 12px",
     borderRadius: 16,
     border: `1px solid ${T.cardBorder}`,
@@ -791,20 +855,56 @@ const styles = {
   },
   legendDot: { width: 8, height: 8, borderRadius: "50%", display: "inline-block" },
   timelineWrap: { position: "relative" },
-  metaRow: {
-    display: "flex",
-    flexWrap: "wrap",
-    justifyContent: "space-between",
-    gap: 12,
-    marginBottom: 10,
-  },
-  mapExplain: { maxWidth: 320, color: T.textDim, fontSize: 11.5, lineHeight: 1.45 },
   legendRow: {
     display: "flex",
     flexWrap: "wrap",
     alignItems: "center",
     gap: 10,
     marginBottom: 10,
+  },
+  playbackCard: {
+    marginBottom: 10,
+    padding: "10px 12px",
+    borderRadius: 16,
+    border: `1px solid ${T.cardBorder}`,
+    background: "rgba(255,255,255,0.025)",
+  },
+  playbackHeader: {
+    display: "flex",
+    flexWrap: "wrap",
+    justifyContent: "space-between",
+    gap: 10,
+    marginBottom: 8,
+  },
+  playButton: {
+    minHeight: 34,
+    minWidth: 72,
+    padding: "0 14px",
+  },
+  playbackRow: {
+    display: "grid",
+    gridTemplateColumns: "minmax(0, 1fr) auto",
+    gap: 12,
+    alignItems: "center",
+  },
+  playbackSlider: {
+    width: "100%",
+    accentColor: T.accent,
+  },
+  playbackValue: {
+    color: T.textPrimary,
+    fontSize: 12,
+    fontWeight: 700,
+    whiteSpace: "nowrap",
+  },
+  playbackTicks: {
+    display: "flex",
+    justifyContent: "space-between",
+    gap: 8,
+    marginTop: 4,
+    color: T.textDim,
+    fontSize: 10.5,
+    fontWeight: 700,
   },
   scaleTrack: {
     flex: "1 1 220px",

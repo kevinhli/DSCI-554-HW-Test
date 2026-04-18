@@ -12,18 +12,14 @@ import { useHousingData } from "./hooks/useHousingData";
 import {
   HORIZON_OPTIONS,
   MAP_METRIC_OPTIONS,
-  buildAnalogForecast,
   buildClusterIndexedSeries,
-  buildEventResponseCatalog,
   buildHorizonResponseMatrix,
   buildIndexedMonthSeries,
-  buildLagSummarySeries,
   buildMedianIndexedSeries,
+  computeInterpolatedHousingResponses,
   computeMortgageResponse,
   computeStateHousingResponses,
   formatBasisPoints,
-  formatPercent,
-  formatShare,
   getEligibleEvents,
   getLatestMonthIndex,
   summarizeResponses,
@@ -33,9 +29,7 @@ import NavBar from "./components/NavBar";
 import HousingTransmissionBeat from "./components/HousingTransmissionBeat";
 import MortgageReactionChart from "./components/MortgageReactionChart";
 import HousingPaceShiftView from "./components/HousingPaceShiftView";
-import HousingLagView from "./components/HousingLagView";
 import HousingSpreadView from "./components/HousingSpreadView";
-import CoolingSignalPanel from "./components/CoolingSignalPanel";
 import AffordabilityBridgePanel from "./components/AffordabilityBridgePanel";
 import HousingStoryPanel from "./components/HousingStoryPanel";
 import HousingStateDetail from "./components/HousingStateDetail";
@@ -72,12 +66,6 @@ function PageFallback() {
   );
 }
 
-function formatDirectionLabel(event) {
-  if (!event) return "No event selected";
-  if (event.direction === "hold") return "Fed held steady";
-  return `Fed ${event.direction} ${formatBasisPoints(event.changePct)}`;
-}
-
 export default function App() {
   const [view, setView] = useState(getHashView);
   const [isPending, startTransition] = useTransition();
@@ -91,9 +79,11 @@ export default function App() {
   } = useHousingData(view !== "methods");
   const [selectedDate, setSelectedDate] = useState(null);
   const [selectedStateCode, setSelectedStateCode] = useState(null);
-  const [horizonQuarters, setHorizonQuarters] = useState(4);
+  const [horizonQuarters, setHorizonQuarters] = useState(12);
   const [primaryView, setPrimaryView] = useState("map");
   const [mapMetric, setMapMetric] = useState("absolute");
+  const [mapPlaybackDay, setMapPlaybackDay] = useState(0);
+  const [isMapPlaying, setIsMapPlaying] = useState(false);
   const displayedHorizonQuarters = useDeferredValue(horizonQuarters);
   const displayedPrimaryView = useDeferredValue(primaryView);
   const displayedMapMetric = useDeferredValue(mapMetric);
@@ -104,11 +94,35 @@ export default function App() {
     return () => window.removeEventListener("hashchange", onHashChange);
   }, []);
 
+  useEffect(() => {
+    if (!isMapPlaying) return;
+    if (mapPlaybackDay >= 90) return;
+    const timer = window.setTimeout(() => {
+      setMapPlaybackDay((current) => {
+        const next = Math.min(90, current + 1);
+        if (next >= 90) {
+          setIsMapPlaying(false);
+        }
+        return next;
+      });
+    }, 38);
+    return () => window.clearTimeout(timer);
+  }, [isMapPlaying, mapPlaybackDay]);
+
   const navigate = useCallback((target) => {
     window.location.hash = target === "dashboard" ? "" : target;
     setView(target);
     window.scrollTo({ top: 0, behavior: "smooth" });
   }, []);
+
+  const toggleMapPlayback = useCallback(() => {
+    if (mapPlaybackDay >= 90) {
+      setMapPlaybackDay(0);
+      setIsMapPlaying(true);
+      return;
+    }
+    setIsMapPlaying((current) => !current);
+  }, [mapPlaybackDay]);
 
   const latestMonthIndex = useMemo(
     () => getLatestMonthIndex(stateHpi),
@@ -146,11 +160,17 @@ export default function App() {
     () => computeStateHousingResponses(selectedEvent, stateHpi, displayedHorizonQuarters),
     [displayedHorizonQuarters, selectedEvent, stateHpi]
   );
+  const effectiveMapPlaybackDay = mapPlaybackDay === 0 ? 1 : mapPlaybackDay;
+  const mapResponses = useMemo(
+    () => computeInterpolatedHousingResponses(selectedEvent, stateHpi, effectiveMapPlaybackDay),
+    [effectiveMapPlaybackDay, selectedEvent, stateHpi]
+  );
 
   const housingSummary = useMemo(
     () => summarizeResponses(housingResponses),
     [housingResponses]
   );
+  const mapSummary = useMemo(() => summarizeResponses(mapResponses), [mapResponses]);
 
   const mortgageResponse = useMemo(
     () =>
@@ -158,22 +178,6 @@ export default function App() {
         ? computeMortgageResponse(mortgageRates, selectedEvent.date)
         : null,
     [mortgageRates, selectedEvent]
-  );
-
-  const eventCatalog = useMemo(
-    () =>
-      buildEventResponseCatalog(
-        eligibleEvents,
-        mortgageRates,
-        stateHpi,
-        displayedHorizonQuarters
-      ),
-    [eligibleEvents, displayedHorizonQuarters, mortgageRates, stateHpi]
-  );
-
-  const housingForecast = useMemo(
-    () => buildAnalogForecast(selectedEvent, mortgageResponse, eventCatalog),
-    [eventCatalog, mortgageResponse, selectedEvent]
   );
 
   const resolvedSelectedStateCode = useMemo(() => {
@@ -209,10 +213,6 @@ export default function App() {
     () => (selectedEvent ? buildMedianIndexedSeries(stateHpi, selectedEvent.date) : []),
     [selectedEvent, stateHpi]
   );
-  const lagSeries = useMemo(
-    () => buildLagSummarySeries(selectedEvent, stateHpi, resolvedSelectedStateCode),
-    [resolvedSelectedStateCode, selectedEvent, stateHpi]
-  );
   const horizonMatrix = useMemo(
     () => buildHorizonResponseMatrix(selectedEvent, stateHpi, resolvedSelectedStateCode),
     [resolvedSelectedStateCode, selectedEvent, stateHpi]
@@ -221,18 +221,16 @@ export default function App() {
     () => (selectedEvent ? buildClusterIndexedSeries(stateHpi, selectedEvent.date) : []),
     [selectedEvent, stateHpi]
   );
+  const neighborhoodOptions = useMemo(
+    () =>
+      [...housingResponses].sort((left, right) => left.stateName.localeCompare(right.stateName)),
+    [housingResponses]
+  );
 
   const horizonLabel =
     HORIZON_OPTIONS.find((option) => option.id === displayedHorizonQuarters)?.description ||
     "1 year after";
-  const coolingShareLabel =
-    housingSummary?.coolingShare == null
-      ? "N/A"
-      : formatShare(housingSummary.coolingShare);
-  const mortgageChipLabel =
-    mortgageResponse?.change == null
-      ? "Mortgage rates: pending"
-      : `Mortgage rates: ${mortgageResponse.changeLabel}`;
+  const mapPlaybackLabel = `Day ${mapPlaybackDay}`;
   const isSwitching =
     isPending ||
     renderedSelectedDate !== resolvedSelectedDate ||
@@ -242,6 +240,10 @@ export default function App() {
   const stageDelayStyle = (delay) => ({
     transitionDelay: `${delay}ms`,
   });
+  const resetMapPlayback = useCallback(() => {
+    setMapPlaybackDay(0);
+    setIsMapPlaying(false);
+  }, []);
 
   const stepEvent = useCallback(
     (delta) => {
@@ -249,10 +251,11 @@ export default function App() {
       const currentIndex = eligibleEvents.findIndex((event) => event.dateStr === selectedEvent.dateStr);
       const nextIndex = (currentIndex + delta + eligibleEvents.length) % eligibleEvents.length;
       startTransition(() => {
+        resetMapPlayback();
         setSelectedDate(eligibleEvents[nextIndex].dateStr);
       });
     },
-    [eligibleEvents, selectedEvent, startTransition]
+    [eligibleEvents, resetMapPlayback, selectedEvent, startTransition]
   );
 
   const handleSelectState = useCallback((stateCode) => {
@@ -321,22 +324,9 @@ export default function App() {
                 Fed to Front Door: Los Angeles
               </h1>
               <p className="hero-subtitle" style={styles.heroSubtitle}>
-                See how each Fed move filtered into mortgage rates and then into Los Angeles
-                neighborhood prices, from the Valley to the harbor.
+                How each Fed move showed up in mortgage rates and LA neighborhood prices.
               </p>
             </div>
-          </div>
-
-          <div className="hero-chip-row" style={{ marginTop: 14 }}>
-            <span className="meta-chip">{selectedEvent?.dateStr || "No event"}</span>
-            <span className="meta-chip">{formatDirectionLabel(selectedEvent)}</span>
-            <span className="meta-chip">{mortgageChipLabel}</span>
-            <span className="meta-chip">
-              LA neighborhoods: {formatPercent(housingSummary?.medianChange)} typical
-            </span>
-            <span className="meta-chip">
-              Neighborhoods cooling: {coolingShareLabel}
-            </span>
           </div>
         </section>
 
@@ -355,6 +345,7 @@ export default function App() {
               value={resolvedSelectedDate || ""}
               onChange={(event) =>
                 startTransition(() => {
+                  resetMapPlayback();
                   setSelectedDate(event.target.value);
                 })
               }
@@ -380,18 +371,17 @@ export default function App() {
 
           <div className="control-grid" style={styles.toolbarRow}>
             <div className="control-cluster" style={styles.toolbarCard}>
-              <span className="control-label">View</span>
+              <span className="control-label">Explore</span>
               <div
                 className="tab-strip"
                 role="tablist"
                 aria-label="Housing views"
                 style={styles.viewTabStrip}
               >
-                {[
-                  { id: "map", label: "Neighborhood map" },
-                  { id: "lag", label: "Reaction timing" },
-                  { id: "spread", label: "Neighborhood spread" },
-                  { id: "pace", label: "Before vs after" },
+                {[ 
+                  { id: "map", label: "Map" },
+                  { id: "spread", label: "Spread" },
+                  { id: "pace", label: "Before/after" },
                 ].map((option) => (
                   <button
                     key={option.id}
@@ -402,6 +392,7 @@ export default function App() {
                     style={styles.viewTabButton}
                     onClick={() =>
                       startTransition(() => {
+                        setIsMapPlaying(false);
                         setPrimaryView(option.id);
                       })
                     }
@@ -413,7 +404,7 @@ export default function App() {
             </div>
 
             <div className="control-cluster" style={styles.toolbarCard}>
-                <span className="control-label">Neighborhood horizon</span>
+                <span className="control-label">Horizon</span>
                 <div className="control-row">
                   {HORIZON_OPTIONS.map((option) => (
                   <button
@@ -423,6 +414,7 @@ export default function App() {
                     style={styles.filterButton}
                     onClick={() =>
                       startTransition(() => {
+                        resetMapPlayback();
                         setHorizonQuarters(option.id);
                       })
                     }
@@ -432,6 +424,22 @@ export default function App() {
                   </button>
                 ))}
               </div>
+            </div>
+
+            <div className="control-cluster" style={styles.toolbarCard}>
+              <span className="control-label">Find a neighborhood</span>
+              <select
+                value={resolvedSelectedStateCode || ""}
+                onChange={(event) => setSelectedStateCode(event.target.value || null)}
+                style={styles.inlineSelect}
+                aria-label="Select a neighborhood"
+              >
+                {neighborhoodOptions.map((option) => (
+                  <option key={option.stateCode} value={option.stateCode}>
+                    {option.stateName}
+                  </option>
+                ))}
+              </select>
             </div>
 
             {primaryView === "map" ? (
@@ -456,48 +464,28 @@ export default function App() {
                   ))}
                 </div>
               </div>
-            ) : primaryView === "pace" ? (
-              <div className="control-cluster" style={styles.toolbarCard}>
-                <span className="control-label">How to read it</span>
-                <div style={styles.inlineExplain}>
-                  Each line starts with a neighborhood's pace before the meeting and ends
-                  with its pace after it. Downward means cooling.
-                </div>
-              </div>
             ) : primaryView === "spread" ? (
               <div className="control-cluster" style={styles.toolbarCard}>
-                <span className="control-label">How to read it</span>
+                <span className="control-label">What this view does</span>
                 <div style={styles.inlineExplain}>
-                  Each dot is a neighborhood. The center band shows the middle half of LA,
-                  and the bright line keeps the selected neighborhood visible.
+                  Shows where neighborhoods landed. Your selected neighborhood stays bright.
                 </div>
               </div>
             ) : (
               <div className="control-cluster" style={styles.toolbarCard}>
-                <span className="control-label">How to read it</span>
+                <span className="control-label">What this view does</span>
                 <div style={styles.inlineExplain}>
-                  The pulse rises where the effect is strongest. Bigger circles mean the
-                  slowdown spread across more neighborhoods.
+                  Compares growth before the meeting with growth later on.
                 </div>
               </div>
             )}
 
           </div>
-
-          <div style={styles.hint}>
-            {primaryView === "map"
-              ? "The map uses real Los Angeles neighborhood boundaries. Color shows the selected housing effect, and the small columns show which neighborhoods were already more expensive at the meeting."
-              : primaryView === "lag"
-              ? "Use this to explain timing: mortgage rates usually react in weeks, while neighborhood price shifts show up over the next few months."
-              : primaryView === "spread"
-              ? "Use this to explain dispersion: some neighborhoods keep running hot, while others cool earlier, and the selected one stays highlighted."
-              : "This compares the same number of months before and after the meeting so the pace shift is easy to understand."}
-          </div>
         </section>
 
         <div
           className={`event-stage${isSwitching ? " is-pending" : ""}`}
-          style={stageDelayStyle(0)}
+          style={stageDelayStyle(24)}
         >
           <HousingTransmissionBeat
             event={selectedEvent}
@@ -516,22 +504,23 @@ export default function App() {
               {displayedPrimaryView === "map" ? (
                 <NeighborhoodHexMap
                   features={stateFeatures}
-                  responses={housingResponses}
-                  summary={housingSummary}
+                  responses={mapResponses}
+                  summary={mapSummary}
                   metricMode={displayedMapMetric}
                   animationKey={selectedEvent?.dateStr || ""}
                   selectedStateCode={resolvedSelectedStateCode}
                   onSelectState={handleSelectState}
-                  horizonLabel={horizonLabel}
                   clusterSeries={clusterSeries}
                   selectedNeighborhoodSeries={selectedStateSeries}
-                />
-              ) : displayedPrimaryView === "lag" ? (
-                <HousingLagView
-                  event={selectedEvent}
-                  mortgageResponse={mortgageResponse}
-                  lagSeries={lagSeries}
-                  animationKey={selectedEvent?.dateStr || ""}
+                  playbackDay={mapPlaybackDay}
+                  effectivePlaybackDay={effectiveMapPlaybackDay}
+                  playbackLabel={mapPlaybackLabel}
+                  isPlaying={isMapPlaying}
+                  onPlaybackChange={(day) => {
+                    setIsMapPlaying(false);
+                    setMapPlaybackDay(day);
+                  }}
+                  onTogglePlayback={toggleMapPlayback}
                 />
               ) : displayedPrimaryView === "spread" ? (
                 <HousingSpreadView
@@ -555,19 +544,6 @@ export default function App() {
               className={`event-stage${isSwitching ? " is-pending" : ""}`}
               style={stageDelayStyle(90)}
             >
-              <CoolingSignalPanel
-                animationKey={selectedEvent?.dateStr || ""}
-                summary={housingSummary}
-                forecast={housingForecast}
-                mortgageResponse={mortgageResponse}
-                horizonLabel={horizonLabel}
-              />
-            </div>
-
-            <div
-              className={`event-stage${isSwitching ? " is-pending" : ""}`}
-              style={stageDelayStyle(130)}
-            >
               <MortgageReactionChart
                 animationKey={selectedEvent?.dateStr || ""}
                 mortgageRates={mortgageRates}
@@ -590,7 +566,7 @@ export default function App() {
 
             <div
               className={`event-stage${isSwitching ? " is-pending" : ""}`}
-              style={stageDelayStyle(120)}
+              style={stageDelayStyle(110)}
             >
               <HousingStoryPanel
                 event={selectedEvent}
@@ -602,7 +578,7 @@ export default function App() {
 
             <div
               className={`event-stage${isSwitching ? " is-pending" : ""}`}
-              style={stageDelayStyle(180)}
+              style={stageDelayStyle(160)}
             >
               <HousingStateDetail
                 animationKey={`${selectedEvent?.dateStr || ""}-${resolvedSelectedStateCode || ""}`}
@@ -615,7 +591,7 @@ export default function App() {
 
             <div
               className={`event-stage${isSwitching ? " is-pending" : ""}`}
-              style={stageDelayStyle(230)}
+              style={stageDelayStyle(210)}
             >
               <HousingRankingPanel
                 animationKey={selectedEvent?.dateStr || ""}
@@ -632,59 +608,62 @@ export default function App() {
 
 const styles = {
   heroSurface: {
-    padding: 20,
-    marginBottom: 18,
+    padding: "12px 16px 10px",
+    marginBottom: 8,
   },
   heroRow: {
     display: "flex",
     flexWrap: "wrap",
-    justifyContent: "space-between",
+    justifyContent: "center",
     alignItems: "flex-start",
-    gap: 16,
+    gap: 12,
   },
   heroCopyBlock: {
-    flex: "1 1 540px",
+    flex: "0 1 840px",
     minWidth: 0,
-  },
-  heroActionBlock: {
-    flex: "0 1 auto",
-    display: "flex",
-    justifyContent: "flex-end",
+    textAlign: "center",
   },
   heroTitle: {
-    margin: "10px 0 8px",
+    margin: "2px 0 0",
   },
   heroSubtitle: {
-    maxWidth: 640,
-    margin: 0,
+    maxWidth: 620,
+    margin: "0 auto",
   },
   controlSurface: {
-    padding: 18,
-    marginBottom: 18,
+    padding: 12,
+    marginBottom: 10,
   },
   toolbarRow: {
-    marginTop: 12,
-    alignItems: "flex-start",
-    gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
+    marginTop: 8,
+    alignItems: "stretch",
+    gridTemplateColumns: "minmax(0, 1.15fr) minmax(0, 0.9fr) minmax(0, 1.05fr) minmax(0, 1fr)",
   },
   toolbarCard: {
-    minHeight: 118,
-    padding: "12px 14px",
+    minHeight: 82,
+    padding: "11px 12px",
     borderRadius: 16,
     border: `1px solid ${T.cardBorder}`,
     background: "rgba(255,255,255,0.025)",
-    justifyContent: "space-between",
+    display: "flex",
+    flexDirection: "column",
+    gap: 8,
+    justifyContent: "flex-start",
   },
   viewTabStrip: {
     display: "grid",
-    gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+    gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+    gap: 6,
     width: "100%",
     maxWidth: "100%",
   },
   viewTabButton: {
     width: "100%",
     justifyContent: "center",
-    minHeight: 36,
+    minHeight: 54,
+    lineHeight: 1.15,
+    textAlign: "center",
+    whiteSpace: "normal",
   },
   smallAction: {
     minHeight: 36,
@@ -707,16 +686,23 @@ const styles = {
       '"Segoe UI Variable Text", "Aptos", "Inter", "Segoe UI", sans-serif',
     outline: "none",
   },
-  hint: {
-    marginTop: 10,
-    color: T.textDim,
+  inlineSelect: {
+    width: "100%",
+    minHeight: 38,
+    background: T.cascadeBg,
+    color: T.textPrimary,
+    border: `1px solid ${T.cardBorder}`,
+    borderRadius: 12,
+    padding: "0 12px",
     fontSize: 12,
-    lineHeight: 1.45,
+    fontFamily:
+      '"Segoe UI Variable Text", "Aptos", "Inter", "Segoe UI", sans-serif',
+    outline: "none",
   },
   inlineExplain: {
     color: T.textSecondary,
-    fontSize: 12,
-    lineHeight: 1.45,
-    paddingTop: 2,
+    fontSize: 11.5,
+    lineHeight: 1.4,
+    paddingTop: 0,
   },
 };

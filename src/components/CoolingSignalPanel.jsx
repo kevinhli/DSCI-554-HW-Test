@@ -6,9 +6,9 @@ import {
 
 function slowdownLabel(share) {
   if (share == null) return "Signal unavailable";
-  if (share >= 0.65) return "Broad slowdown";
-  if (share >= 0.4) return "Mixed slowdown";
-  return "Limited slowdown";
+  if (share >= 0.65) return "Widespread slowdown";
+  if (share >= 0.4) return "Some slowdown";
+  return "Very little slowdown";
 }
 
 export default function CoolingSignalPanel({
@@ -30,9 +30,10 @@ export default function CoolingSignalPanel({
     <section className="dashboard-surface dash-card" style={styles.card}>
       <div style={styles.header}>
         <div>
-          <div style={styles.title}>Neighborhood cooling signal</div>
+          <div style={styles.title}>How many neighborhoods slowed down?</div>
           <div style={styles.copy}>
-            The easiest read: how many LA neighborhoods were growing more slowly than before?
+            This answers a simple question: after the Fed meeting, what share of
+            neighborhoods were growing more slowly than they were before?
           </div>
         </div>
         <div style={styles.badge}>{slowdownLabel(actualShare)}</div>
@@ -40,7 +41,7 @@ export default function CoolingSignalPanel({
 
       <div style={styles.mainRow}>
         <div style={styles.bigStat}>
-          <span style={styles.bigLabel}>Neighborhoods cooling</span>
+          <span style={styles.bigLabel}>Neighborhoods slowing down</span>
           <strong style={styles.bigValue}>{formatShare(actualShare)}</strong>
           <span style={styles.bigNote}>{horizonLabel} after the meeting</span>
         </div>
@@ -86,7 +87,7 @@ export default function CoolingSignalPanel({
 
       <div style={styles.statGrid}>
         <div style={styles.stat}>
-          <span style={styles.statLabel}>Typical price change</span>
+          <span style={styles.statLabel}>Typical neighborhood move</span>
           <strong style={styles.statValue}>{formatPercent(summary.medianChange)}</strong>
         </div>
         <div style={styles.stat}>

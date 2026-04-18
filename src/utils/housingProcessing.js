@@ -10,18 +10,20 @@ const DAY_MS = 86_400_000;
 export const HORIZON_OPTIONS = [
   { id: 3, label: "3M", description: "3 months later" },
   { id: 6, label: "6M", description: "6 months later" },
+  { id: 9, label: "9M", description: "9 months later" },
   { id: 12, label: "12M", description: "1 year later" },
 ];
 
 const LAG_OPTIONS = [
   { id: 3, label: "3M", description: "3 months later" },
   { id: 6, label: "6M", description: "6 months later" },
+  { id: 9, label: "9M", description: "9 months later" },
   { id: 12, label: "12M", description: "1 year later" },
 ];
 
 export const MAP_METRIC_OPTIONS = [
-  { id: "absolute", label: "Home-price change" },
-  { id: "acceleration", label: "Did this neighborhood cool?" },
+  { id: "absolute", label: "Who outpaced LA?" },
+  { id: "acceleration", label: "Who started slowing down?" },
 ];
 
 export function monthIndexFromDate(date) {
@@ -140,6 +142,81 @@ export function computeStateHousingResponses(event, seriesMap, horizonMonths) {
       targetMonth: target ? monthLabelFromIndex(target.monthIndex) : null,
       baselineValue: baseline?.value ?? null,
       targetValue: target?.value ?? null,
+      changePct,
+      previousChangePct,
+      acceleration:
+        changePct != null && previousChangePct != null
+          ? changePct - previousChangePct
+          : null,
+    };
+  });
+
+  const valid = responses.filter((response) => response.changePct != null);
+  const medianChange = median(valid, (response) => response.changePct) ?? 0;
+
+  return valid
+    .map((response) => ({
+      ...response,
+      relativeToMedian: response.changePct - medianChange,
+    }))
+    .sort((left, right) => left.stateName.localeCompare(right.stateName));
+}
+
+function interpolateSeriesValue(series, targetIndex) {
+  if (!series?.length || targetIndex == null || Number.isNaN(targetIndex)) return null;
+
+  const first = series[0];
+  const last = series[series.length - 1];
+  if (targetIndex < first.monthIndex || targetIndex > last.monthIndex) return null;
+
+  const lowerIndex = Math.floor(targetIndex);
+  const upperIndex = Math.ceil(targetIndex);
+  const lower = series.find((row) => row.monthIndex === lowerIndex) || null;
+  const upper = series.find((row) => row.monthIndex === upperIndex) || null;
+
+  if (!lower || !upper) return null;
+  if (lower.monthIndex === upper.monthIndex) return lower.value;
+
+  const t = (targetIndex - lower.monthIndex) / (upper.monthIndex - lower.monthIndex);
+  return lower.value + (upper.value - lower.value) * t;
+}
+
+export function computeInterpolatedHousingResponses(event, seriesMap, horizonDays) {
+  if (!event || !seriesMap) return [];
+
+  const eventMonthIndex = monthIndexFromDate(event.date);
+  const monthOffset = horizonDays / 30;
+  const targetMonthIndex = eventMonthIndex + monthOffset;
+  const previousMonthIndex = eventMonthIndex - monthOffset;
+
+  const responses = Object.entries(seriesMap).map(([stateCode, series]) => {
+    const meta = getNeighborhoodMeta(stateCode);
+    const baseline = interpolateSeriesValue(series, eventMonthIndex);
+    const target = interpolateSeriesValue(series, targetMonthIndex);
+    const previous = interpolateSeriesValue(series, previousMonthIndex);
+
+    const changePct =
+      baseline != null && target != null && baseline !== 0
+        ? ((target - baseline) / baseline) * 100
+        : null;
+
+    const previousChangePct =
+      previous != null && baseline != null && previous !== 0
+        ? ((baseline - previous) / previous) * 100
+        : null;
+
+    return {
+      stateCode,
+      stateName: meta?.name || stateCode,
+      shortLabel: meta?.shortLabel || stateCode,
+      clusterId: meta?.clusterId || "other",
+      clusterLabel: LA_CLUSTER_BY_ID[meta?.clusterId]?.label || "Other neighborhoods",
+      baselineQuarter: monthLabelFromIndex(eventMonthIndex),
+      targetQuarter: monthLabelFromIndex(Math.round(targetMonthIndex)),
+      baselineMonth: monthLabelFromIndex(eventMonthIndex),
+      targetMonth: monthLabelFromIndex(Math.round(targetMonthIndex)),
+      baselineValue: baseline,
+      targetValue: target,
       changePct,
       previousChangePct,
       acceleration:

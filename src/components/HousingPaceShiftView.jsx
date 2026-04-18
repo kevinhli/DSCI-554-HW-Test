@@ -48,9 +48,9 @@ export default function HousingPaceShiftView({
     <section className="dashboard-surface" style={styles.card}>
       <div style={styles.header}>
         <div>
-          <div style={styles.title}>Before vs after</div>
+          <div style={styles.title}>Before vs after growth</div>
           <div style={styles.copy}>
-            Each line compares neighborhood price growth before the meeting with growth {horizonLabel.toLowerCase()} after it. Downward lines cooled. Upward lines re-accelerated.
+            Each line starts with price growth before the meeting and ends with price growth {horizonLabel.toLowerCase()} after it. Downward lines slowed down. Upward lines sped up.
           </div>
         </div>
 

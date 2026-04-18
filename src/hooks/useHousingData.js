@@ -53,19 +53,24 @@ async function loadFomcEvents() {
 }
 
 async function loadNeighborhoodHpi() {
-  const text = await fetchText("la_neighborhood_zhvi.csv");
-  const rows = csvParse(text, (row) => {
-    const meta = LA_NEIGHBORHOODS_BY_NAME[row.neighborhood];
-    const value = Number(row.value);
-    if (!meta || !row.month || !Number.isFinite(value)) return null;
+  const texts = await Promise.all([
+    fetchText("la_neighborhood_zhvi.csv"),
+    fetchText("la_additional_places_zhvi.csv"),
+  ]);
+  const rows = texts.flatMap((text) =>
+    csvParse(text, (row) => {
+      const meta = LA_NEIGHBORHOODS_BY_NAME[row.neighborhood];
+      const value = Number(row.value);
+      if (!meta || !row.month || !Number.isFinite(value)) return null;
 
-    return {
-      stateCode: meta.id,
-      date: monthEndDateFromString(row.month),
-      monthIndex: monthIndexFromDateString(row.month),
-      value,
-    };
-  }).filter(Boolean);
+      return {
+        stateCode: meta.id,
+        date: monthEndDateFromString(row.month),
+        monthIndex: monthIndexFromDateString(row.month),
+        value,
+      };
+    }).filter(Boolean)
+  );
 
   const seriesMap = {};
   for (const row of rows) {
@@ -83,9 +88,12 @@ async function loadNeighborhoodHpi() {
 }
 
 async function loadNeighborhoodFeatures() {
-  const geojson = await fetchJson("la_times_neighborhoods.geojson");
+  const [laGeojson, adjacentGeojson] = await Promise.all([
+    fetchJson("la_times_neighborhoods.geojson"),
+    fetchJson("la_adjacent_cities.geojson"),
+  ]);
 
-  return (geojson.features || [])
+  return [...(laGeojson.features || []), ...(adjacentGeojson.features || [])]
     .map((feature) => {
       const meta = LA_NEIGHBORHOODS_BY_NAME[feature?.properties?.name];
       if (!meta) return null;
