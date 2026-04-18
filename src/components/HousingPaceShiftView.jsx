@@ -35,12 +35,12 @@ export default function HousingPaceShiftView({
   const minValue = (valueExtent[0] ?? -1) - 0.8;
   const maxValue = (valueExtent[1] ?? 1) + 0.8;
   const y = scaleLinear().domain([maxValue, minValue]).range([0, INNER_H]);
-  const slowestCode = ranked[0]?.stateCode || null;
-  const fastestCode = ranked[ranked.length - 1]?.stateCode || null;
+  const biggestNegativeCode = ranked[0]?.stateCode || null;
+  const biggestPositiveCode = ranked[ranked.length - 1]?.stateCode || null;
   const importantCodes = new Set([
     selectedStateCode,
-    slowestCode,
-    fastestCode,
+    biggestNegativeCode,
+    biggestPositiveCode,
   ]);
   const ticks = y.ticks(6);
 
@@ -61,11 +61,11 @@ export default function HousingPaceShiftView({
           </span>
           <span style={styles.legendItem}>
             <span style={{ ...styles.legendDot, background: "#4f8cff" }} />
-            Biggest slowdown
+            Biggest negative move
           </span>
           <span style={styles.legendItem}>
             <span style={{ ...styles.legendDot, background: "#f59e0b" }} />
-            Biggest speed-up
+            Biggest positive move
           </span>
           <span style={styles.legendItem}>
             <span style={{ ...styles.legendDot, background: "rgba(255,255,255,0.28)" }} />
@@ -118,15 +118,25 @@ export default function HousingPaceShiftView({
             const beforeY = y(response.previousChangePct);
             const afterY = y(response.changePct);
             const isSelected = response.stateCode === selectedStateCode;
-            const isSlowest = response.stateCode === slowestCode && !isSelected;
-            const isFastest = response.stateCode === fastestCode && !isSelected;
+            const isNegativeLeader = response.stateCode === biggestNegativeCode;
+            const isPositiveLeader = response.stateCode === biggestPositiveCode;
             const stroke = isSelected
               ? T.accent
-              : isSlowest
+              : isNegativeLeader
               ? "#4f8cff"
-              : isFastest
+              : isPositiveLeader
               ? "#f59e0b"
               : "rgba(255,255,255,0.17)";
+            const overlayStroke = isNegativeLeader
+              ? "#4f8cff"
+              : isPositiveLeader
+              ? "#f59e0b"
+              : null;
+            const labelFill = isSelected
+              ? T.accent
+              : isNegativeLeader
+              ? "#93c5fd"
+              : "#fbbf24";
             const delay = Math.min(280, index * 10);
 
             return (
@@ -138,33 +148,61 @@ export default function HousingPaceShiftView({
                   animation: `chartFadeUp 360ms cubic-bezier(0.22, 1, 0.36, 1) ${delay}ms both`,
                 }}
               >
+                {isSelected ? (
+                  <line
+                    x1={BEFORE_X}
+                    x2={AFTER_X}
+                    y1={beforeY}
+                    y2={afterY}
+                    stroke="rgba(255,255,255,0.26)"
+                    strokeWidth={6.2}
+                    opacity={0.95}
+                    style={styles.motionLine}
+                  />
+                ) : null}
                 <line
                   x1={BEFORE_X}
                   x2={AFTER_X}
                   y1={beforeY}
                   y2={afterY}
                   stroke={stroke}
-                  strokeWidth={isSelected ? 3.1 : isSlowest || isFastest ? 1.9 : 1.05}
-                  opacity={isSelected ? 1 : isSlowest || isFastest ? 0.9 : 0.2}
+                  strokeWidth={isSelected ? 3.2 : isNegativeLeader || isPositiveLeader ? 2.1 : 1.05}
+                  opacity={isSelected ? 1 : isNegativeLeader || isPositiveLeader ? 0.95 : 0.18}
                   style={styles.motionLine}
                 />
 
                 <circle
                   cx={BEFORE_X}
                   cy={beforeY}
-                  r={isSelected ? 4.6 : isSlowest || isFastest ? 3.4 : 2.3}
+                  r={isSelected ? 4.8 : isNegativeLeader || isPositiveLeader ? 3.6 : 2.3}
                   fill={isSelected ? T.accent : "rgba(255,255,255,0.34)"}
-                  opacity={isSelected ? 1 : isSlowest || isFastest ? 0.86 : 0.32}
+                  stroke={overlayStroke || T.cardBg}
+                  strokeWidth={overlayStroke ? 1.1 : 0.8}
+                  opacity={isSelected ? 1 : isNegativeLeader || isPositiveLeader ? 0.9 : 0.32}
                   style={styles.motionLine}
                 />
                 <circle
                   cx={AFTER_X}
                   cy={afterY}
-                  r={isSelected ? 5.1 : isSlowest || isFastest ? 3.5 : 2.6}
+                  r={isSelected ? 5.4 : isNegativeLeader || isPositiveLeader ? 4 : 2.6}
                   fill={stroke}
-                  opacity={isSelected ? 1 : isSlowest || isFastest ? 0.95 : 0.42}
+                  stroke={overlayStroke ? "rgba(255,255,255,0.92)" : T.cardBg}
+                  strokeWidth={overlayStroke ? 1.5 : 1}
+                  opacity={isSelected ? 1 : isNegativeLeader || isPositiveLeader ? 0.98 : 0.42}
                   style={styles.motionLine}
                 />
+                {isSelected && overlayStroke ? (
+                  <circle
+                    cx={AFTER_X}
+                    cy={afterY}
+                    r={8.2}
+                    fill="none"
+                    stroke={overlayStroke}
+                    strokeWidth={1.8}
+                    opacity={0.95}
+                    style={styles.motionLine}
+                  />
+                ) : null}
 
                 {(isSelected || importantCodes.has(response.stateCode)) && (
                   <>
@@ -172,9 +210,12 @@ export default function HousingPaceShiftView({
                       x={BEFORE_X - 10}
                       y={beforeY + 4}
                       textAnchor="end"
-                      fill={isSelected ? T.accent : isSlowest ? "#93c5fd" : "#fbbf24"}
+                      fill={labelFill}
                       fontSize="10"
                       fontWeight={isSelected ? "700" : "600"}
+                      stroke="rgba(10,13,18,0.92)"
+                      strokeWidth="3"
+                      paintOrder="stroke"
                     >
                       {response.shortLabel}
                     </text>
@@ -182,9 +223,12 @@ export default function HousingPaceShiftView({
                       x={AFTER_X + 10}
                       y={afterY + 4}
                       textAnchor="start"
-                      fill={isSelected ? T.accent : isSlowest ? "#93c5fd" : "#fbbf24"}
+                      fill={labelFill}
                       fontSize="10"
                       fontWeight={isSelected ? "700" : "600"}
+                      stroke="rgba(10,13,18,0.92)"
+                      strokeWidth="3"
+                      paintOrder="stroke"
                     >
                       {response.shortLabel}
                     </text>

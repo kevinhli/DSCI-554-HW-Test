@@ -10,7 +10,6 @@ import {
 } from "react";
 import { useHousingData } from "./hooks/useHousingData";
 import {
-  HORIZON_OPTIONS,
   MAP_METRIC_OPTIONS,
   buildClusterIndexedSeries,
   buildHorizonResponseMatrix,
@@ -79,12 +78,11 @@ export default function App() {
   } = useHousingData(view !== "methods");
   const [selectedDate, setSelectedDate] = useState(null);
   const [selectedStateCode, setSelectedStateCode] = useState(null);
-  const [horizonQuarters, setHorizonQuarters] = useState(12);
   const [primaryView, setPrimaryView] = useState("map");
   const [mapMetric, setMapMetric] = useState("absolute");
   const [mapPlaybackDay, setMapPlaybackDay] = useState(0);
   const [isMapPlaying, setIsMapPlaying] = useState(false);
-  const displayedHorizonQuarters = useDeferredValue(horizonQuarters);
+  const horizonMonths = 12;
   const displayedPrimaryView = useDeferredValue(primaryView);
   const displayedMapMetric = useDeferredValue(mapMetric);
 
@@ -130,8 +128,8 @@ export default function App() {
   );
 
   const eligibleEvents = useMemo(
-    () => getEligibleEvents(fomcEvents || [], latestMonthIndex, horizonQuarters),
-    [fomcEvents, horizonQuarters, latestMonthIndex]
+    () => getEligibleEvents(fomcEvents || [], latestMonthIndex, horizonMonths),
+    [fomcEvents, latestMonthIndex]
   );
 
   const resolvedSelectedDate = useMemo(() => {
@@ -157,8 +155,8 @@ export default function App() {
   );
 
   const housingResponses = useMemo(
-    () => computeStateHousingResponses(selectedEvent, stateHpi, displayedHorizonQuarters),
-    [displayedHorizonQuarters, selectedEvent, stateHpi]
+    () => computeStateHousingResponses(selectedEvent, stateHpi, horizonMonths),
+    [selectedEvent, stateHpi]
   );
   const effectiveMapPlaybackDay = mapPlaybackDay === 0 ? 1 : mapPlaybackDay;
   const mapResponses = useMemo(
@@ -227,14 +225,11 @@ export default function App() {
     [housingResponses]
   );
 
-  const horizonLabel =
-    HORIZON_OPTIONS.find((option) => option.id === displayedHorizonQuarters)?.description ||
-    "1 year after";
+  const horizonLabel = "1 year later";
   const mapPlaybackLabel = `Day ${mapPlaybackDay}`;
   const isSwitching =
     isPending ||
     renderedSelectedDate !== resolvedSelectedDate ||
-    displayedHorizonQuarters !== horizonQuarters ||
     displayedPrimaryView !== primaryView ||
     displayedMapMetric !== mapMetric;
   const stageDelayStyle = (delay) => ({
@@ -396,29 +391,6 @@ export default function App() {
                         setPrimaryView(option.id);
                       })
                     }
-                  >
-                    {option.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className="control-cluster" style={styles.toolbarCard}>
-                <span className="control-label">Horizon</span>
-                <div className="control-row">
-                  {HORIZON_OPTIONS.map((option) => (
-                  <button
-                    key={option.id}
-                    type="button"
-                    className={horizonQuarters === option.id ? "primary-button" : "ghost-button"}
-                    style={styles.filterButton}
-                    onClick={() =>
-                      startTransition(() => {
-                        resetMapPlayback();
-                        setHorizonQuarters(option.id);
-                      })
-                    }
-                    aria-pressed={horizonQuarters === option.id}
                   >
                     {option.label}
                   </button>
@@ -637,7 +609,7 @@ const styles = {
   toolbarRow: {
     marginTop: 8,
     alignItems: "stretch",
-    gridTemplateColumns: "minmax(0, 1.15fr) minmax(0, 0.9fr) minmax(0, 1.05fr) minmax(0, 1fr)",
+    gridTemplateColumns: "minmax(0, 1.2fr) minmax(0, 1fr) minmax(0, 0.95fr)",
   },
   toolbarCard: {
     minHeight: 82,
@@ -670,8 +642,8 @@ const styles = {
     padding: "0 14px",
   },
   filterButton: {
-    minHeight: 34,
-    padding: "0 12px",
+    minHeight: 36,
+    padding: "0 14px",
   },
   stepSelect: {
     flex: "1 1 320px",
@@ -688,7 +660,7 @@ const styles = {
   },
   inlineSelect: {
     width: "100%",
-    minHeight: 38,
+    minHeight: 42,
     background: T.cascadeBg,
     color: T.textPrimary,
     border: `1px solid ${T.cardBorder}`,
@@ -702,7 +674,9 @@ const styles = {
   inlineExplain: {
     color: T.textSecondary,
     fontSize: 11.5,
-    lineHeight: 1.4,
-    paddingTop: 0,
+    lineHeight: 1.45,
+    minHeight: 42,
+    display: "flex",
+    alignItems: "center",
   },
 };
